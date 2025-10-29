@@ -2,10 +2,10 @@
   "compilerOptions": {
     "target": "ES2020",
     "useDefineForClassFields": true,
-    "lib": ["ES2020", "DOM", "DOMIterable"],
+    "lib": ["ES2020", "DOM", "DOM.Iterable"], // 👈 구문 오류를 일으키는 옵션 수정 및 단순화
     "module": "ESNext",
     "skipLibCheck": true,
-
+    
     /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
@@ -14,16 +14,12 @@
     "noEmit": true,
     "jsx": "react-jsx",
     
-    /* Vercel 빌드 오류 해결을 위한 추가 설정 */
-    "typeRoots": ["./node_modules/@types", "./src/@types"],
-    "allowSyntheticDefaultImports": true,
+    /* Vercel 빌드 오류 해결 핵심 설정 */
+    "typeRoots": ["./node_modules/@types", "./src/@types"], 
+    "allowSyntheticDefaultImports": true, 
     "paths": {
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src"], // 👈 src 폴더 전체를 컴파일 대상으로 지정
-  "references": [
-    { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
-  ]
+  "include": ["src/**/*.ts", "src/**/*.tsx"] // 👈 src 폴더의 모든 .ts/.tsx 파일을 컴파일하도록 지정
 }
