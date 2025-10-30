@@ -137,7 +137,7 @@ function OptionTile({
   active: boolean;
   label: string;
   onSelect: () => void;
-  /** Rent-back 같은 가로 정렬용이면 false */
+  /** Rent-back 가로 정렬용이면 false */
   fullWidth?: boolean;
 }) {
   const outerStyle: React.CSSProperties = {
@@ -167,7 +167,6 @@ function OptionTile({
       style={{ ...outerStyle, ...activeStyle, border: "1px solid rgba(255,255,255,.10)", background: active ? "rgba(255,255,255,.14)" : "rgba(255,255,255,.04)" }}
     >
       <div style={{ display: "inline-flex", alignItems: "center", width: fullWidth ? "100%" : "auto" }}>
-        {/* 체크 아이콘 원형칸 */}
         <span
           aria-hidden
           style={{
@@ -185,18 +184,14 @@ function OptionTile({
         >
           {active ? <CheckCircle2 size={16} color="#111" /> : null}
         </span>
-
-        {/* 아이콘과 텍스트 사이 넓은 간격 */}
         <div style={{ width: 24, flex: "0 0 24px" }} />
-
-        {/* 라벨 텍스트 */}
         <span style={{ lineHeight: 1.4, fontSize: 15 }}>{label}</span>
       </div>
     </div>
   );
 }
 
-/* --------- Reusable UI: Form Row (Label left, input right) --------- */
+/* --------- Reusable UI: Form Row --------- */
 function FormRow({
   label,
   children,
@@ -377,7 +372,7 @@ export default function App() {
   return (
     <div className="mc-bg" style={{ minHeight: "100vh" }}>
       <div style={{ maxWidth: 920, margin: "0 auto", padding: "32px 20px 48px" }}>
-        {/* Header (centered) */}
+        {/* Header */}
         <div style={{ textAlign: "center" }}>
           <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
             Maison Collective — Offer Strategy Simulator
@@ -385,7 +380,7 @@ export default function App() {
           <p className="mt-1 text-sm text-neutral-400">
             Make your selections below. Your final Offer Strength appears at the end.
           </p>
-          <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 16 }}>
+          <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 16, flexWrap: "wrap" }}>
             <Button variant="secondary" className="mc-btn-secondary" onClick={resetAll}>
               <RefreshCcw className="mr-2 h-4 w-4" /> Reset
             </Button>
@@ -396,7 +391,7 @@ export default function App() {
         </div>
 
         <div style={{ marginTop: 24, display: "grid", gap: 16 }}>
-          {/* 1. Competition (left-aligned) */}
+          {/* 1. Competition */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6">
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -419,7 +414,7 @@ export default function App() {
             </CardContent>
           </Card>
 
-          {/* 2. Basic Information (left-aligned tidy rows, no icon) */}
+          {/* 2. Basic Information */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6">
               <h2 className="text-lg font-medium">2. Basic Information</h2>
@@ -468,7 +463,7 @@ export default function App() {
             </CardContent>
           </Card>
 
-          {/* 3. Financing Method (left-aligned, no icon) */}
+          {/* 3. Financing Method */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6">
               <h2 className="text-lg font-medium">3. Financing Method</h2>
@@ -494,7 +489,7 @@ export default function App() {
             </CardContent>
           </Card>
 
-          {/* 4. Home Sale Contingency (left-aligned) */}
+          {/* 4. Home Sale Contingency */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6">
               <h2 className="text-lg font-medium">4. Home Sale Contingency</h2>
@@ -511,7 +506,7 @@ export default function App() {
             </CardContent>
           </Card>
 
-          {/* 5. Earnest Money Deposit (left-aligned) */}
+          {/* 5. Earnest Money Deposit */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6">
               <h2 className="text-lg font-medium">5. Earnest Money Deposit (EMD)</h2>
@@ -530,7 +525,7 @@ export default function App() {
             </CardContent>
           </Card>
 
-          {/* 6. Home Inspection (left-aligned) */}
+          {/* 6. Home Inspection */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6">
               <h2 className="text-lg font-medium">6. Home Inspection Contingency</h2>
@@ -573,7 +568,7 @@ export default function App() {
             </CardContent>
           </Card>
 
-          {/* 7. Appraisal & Financing (left-aligned) */}
+          {/* 7. Appraisal & Financing */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6">
               <h2 className="text-lg font-medium">7. Appraisal & Financing Contingency</h2>
@@ -616,7 +611,7 @@ export default function App() {
             </CardContent>
           </Card>
 
-          {/* 8. Taxes/Title (left-aligned) */}
+          {/* 8. Taxes/Title */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6">
               <h2 className="text-lg font-medium">8. Recordation / Transfer Tax / Title Company</h2>
@@ -641,7 +636,7 @@ export default function App() {
             </CardContent>
           </Card>
 
-          {/* 9. Commission (left-aligned) */}
+          {/* 9. Commission */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6">
               <h2 className="text-lg font-medium">9. Commission</h2>
@@ -661,7 +656,7 @@ export default function App() {
             </CardContent>
           </Card>
 
-          {/* 10. Offer Price & Escalation (left-aligned + Rent-back inline) */}
+          {/* 10. Offer Price & Escalation + Rent-back(옵션 왼쪽 / 라벨 오른쪽) */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6">
               <h2 className="text-lg font-medium">10. Offer Price & Escalation</h2>
@@ -702,26 +697,41 @@ export default function App() {
                     placeholder="e.g., 5000"
                   />
                 </FormRow>
+              </div>
 
-                {/* Rent-back: 한 줄에 라벨 + 가로 옵션 */}
-                <FormRow label="Rent-back">
-                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                    {RENTBACK.map((opt) => (
-                      <OptionTile
-                        key={opt.id}
-                        active={rentback === opt.id}
-                        label={opt.label}
-                        onSelect={() => setRentback(opt.id)}
-                        fullWidth={false}
-                      />
-                    ))}
-                  </div>
-                </FormRow>
+              {/* 여기서 레이아웃 변경: 왼쪽에 옵션, 오른쪽에 라벨 */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr auto",
+                  alignItems: "start",
+                  columnGap: 18,
+                  rowGap: 10,
+                  marginTop: 16,
+                }}
+              >
+                {/* 왼쪽: 옵션들 (1~9번과 동일한 왼쪽 정렬, 세로 리스트) */}
+                <div style={{ display: "grid", gap: 10 }}>
+                  {RENTBACK.map((opt) => (
+                    <OptionTile
+                      key={opt.id}
+                      active={rentback === opt.id}
+                      label={opt.label}
+                      onSelect={() => setRentback(opt.id)}
+                      fullWidth={true}
+                    />
+                  ))}
+                </div>
+
+                {/* 오른쪽: Rent-back 라벨만 배치 */}
+                <div style={{ textAlign: "right", alignSelf: "start" }}>
+                  <Label className="text-neutral-200" style={{ margin: 0 }}>Rent-back</Label>
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Final — Offer Strength (centered) */}
+          {/* Final — Offer Strength */}
           <Card className="mc-card">
             <CardContent className="p-6 md:p-8" style={{ textAlign: "center" }}>
               <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
@@ -747,7 +757,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* brief summary (centered cards) */}
               <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(2, minmax(0,1fr))", maxWidth: 680, margin: "18px auto 0" }}>
                 <SummaryKV label="Competition" value={COMPETITION_OPTIONS.find(o=>o.id===competition)?.label || ""} />
                 <SummaryKV label="Financing" value={`${FINANCING_OPTIONS.find(o=>o.id===financing)?.label?.split(" — ")[0]} • ${downPct}% down`} />
@@ -757,7 +766,6 @@ export default function App() {
                 <SummaryKV label="EMD" value={`${emdPct}% of offer`} />
               </div>
 
-              {/* recommendations (EN) */}
               <div style={{ marginTop: 18 }}>
                 <p className="text-sm font-medium" style={{ marginBottom: 8 }}>Recommendations</p>
                 <ul style={{ listStyle: "disc", paddingLeft: 18, margin: "0 auto", textAlign: "left", maxWidth: 680, lineHeight: 1.6 }}>
@@ -793,9 +801,13 @@ ${getRecommendations(recsState).map((x,i)=>`${i+1}. ${x}`).join("\n")}
             </CardContent>
           </Card>
 
-          <p className="text-center text-xs text-neutral-500" style={{ marginTop: 8 }}>
+          {/* FOOTER — 항상 중앙 정렬 */}
+          <footer
+            className="text-xs text-neutral-500"
+            style={{ marginTop: 8, width: "100%", textAlign: "center", display: "block" }}
+          >
             © {new Date().getFullYear()} Maison Collective • Built for client education
-          </p>
+          </footer>
         </div>
       </div>
     </div>
