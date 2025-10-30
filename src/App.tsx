@@ -121,8 +121,8 @@ function getRecommendations(state: {
   return rec.slice(0, 5);
 }
 
-/* ------------- Reusable UI: Option Tile ------------- */
-function OptionTile({
+/* --------- Reusable UI: Radio Row (old style) --------- */
+function RadioRow({
   active,
   label,
   onSelect,
@@ -131,55 +131,29 @@ function OptionTile({
   label: string;
   onSelect: () => void;
 }) {
-  const outerStyle: React.CSSProperties = {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderRadius: 16,
-    padding: "12px 14px",
-    cursor: "pointer",
-    outline: "none",
-    transition: "background .15s ease, border-color .15s ease, box-shadow .15s ease",
-    border: "1px solid rgba(255,255,255,.10)",
-    background: active ? "rgba(255,255,255,.14)" : "rgba(255,255,255,.04)",
-    marginRight: 8,
-  };
-  const activeRing: React.CSSProperties = active
-    ? { borderColor: "rgba(255,255,255,.55)", boxShadow: "0 0 0 3px rgba(255,255,255,.06)" }
-    : {};
-
   return (
-    <div
-      role="radio"
-      aria-checked={active}
-      tabIndex={0}
+    <label
+      className={`flex cursor-pointer items-center justify-between rounded-xl border p-3 transition ${
+        active ? "border-white bg-neutral-800" : "border-neutral-800 hover:bg-neutral-850"
+      }`}
       onClick={onSelect}
       onKeyDown={(e) => ((e.key === "Enter" || e.key === " ") && onSelect())}
-      className="mc-pill"
-      style={{ ...outerStyle, ...activeRing }}
+      tabIndex={0}
+      role="radio"
+      aria-checked={active}
     >
-      <div style={{ display: "flex", alignItems: "center" }}>
+      <div className="flex items-center gap-3">
         <span
+          className={`inline-flex h-5 w-5 items-center justify-center rounded-full ${
+            active ? "border border-white bg-white text-neutral-900" : "border border-neutral-500"
+          }`}
           aria-hidden
-          style={{
-            height: 22,
-            width: 22,
-            minWidth: 22,
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            borderRadius: "999px",
-            border: active ? "1px solid #fff" : "1px solid rgba(255,255,255,.4)",
-            background: active ? "rgba(255,255,255,.85)" : "transparent",
-            color: "#111",
-          }}
         >
-          {active ? <CheckCircle2 size={16} color="#111" /> : null}
+          {active ? <CheckCircle2 size={14} /> : null}
         </span>
-        <div style={{ width: 12 }} />
-        <span style={{ lineHeight: 1.4, fontSize: 15 }}>{label}</span>
+        <span className="text-sm">{label}</span>
       </div>
-    </div>
+    </label>
   );
 }
 
@@ -187,27 +161,22 @@ function OptionTile({
 function FormRow({
   label,
   children,
-  rightLabel = true,
 }: {
   label: string;
   children: React.ReactNode;
-  rightLabel?: boolean;
 }) {
   return (
     <div
+      className="w-full"
       style={{
         display: "grid",
         gridTemplateColumns: "minmax(160px, 240px) 1fr",
         alignItems: "center",
         columnGap: 18,
         rowGap: 10,
-        width: "100%",
       }}
     >
-      <Label
-        className="text-neutral-200"
-        style={{ margin: 0, textAlign: rightLabel ? "right" as const : "left" as const }}
-      >
+      <Label className="text-neutral-200" style={{ margin: 0, textAlign: "right" as const }}>
         {label}
       </Label>
       <div>{children}</div>
@@ -218,7 +187,7 @@ function FormRow({
 function SummaryKV({ label, value }: { label: string; value: string }) {
   return (
     <div style={{ textAlign: "center" }}>
-      <div style={{ opacity: .7, fontSize: 12, marginBottom: 2 }}>{label}</div>
+      <div style={{ opacity: 0.7, fontSize: 12, marginBottom: 2 }}>{label}</div>
       <div style={{ fontSize: 14 }}>{value}</div>
     </div>
   );
@@ -269,6 +238,8 @@ export default function App() {
   const [offerPrice, setOfferPrice] = useState<number | string>("");
   const [escalationCap, setEscalationCap] = useState<number | string>("");
   const [escalationBy, setEscalationBy] = useState<number | string>("");
+
+  // Rent-back (moved to its own left-aligned block under #10)
   const [rentback, setRentback] = useState<(typeof RENTBACK)[number]["id"]>("none");
 
   // Derived score
@@ -393,16 +364,16 @@ export default function App() {
           {/* 1. Competition */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6">
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div className="flex items-center justify-between">
                 <h2 className="text-lg font-medium">1. Competition</h2>
                 <Info className="h-4 w-4 text-neutral-400" />
               </div>
               <p className="mt-1 text-sm text-neutral-400">
                 Is there a competition or are you the only offer? Choose one.
               </p>
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
                 {COMPETITION_OPTIONS.map((opt) => (
-                  <OptionTile
+                  <RadioRow
                     key={opt.id}
                     active={competition === opt.id}
                     label={opt.label}
@@ -415,9 +386,9 @@ export default function App() {
 
           {/* 2. Basic Information */}
           <Card className="mc-card">
-            <CardContent className="p-5 md:p-6">
+            <CardContent className="p-5 md:p-6 space-y-4">
               <h2 className="text-lg font-medium">2. Basic Information</h2>
-              <div style={{ display: "grid", gap: 14, marginTop: 16 }}>
+              <div className="grid gap-4">
                 <FormRow label="Property Address">
                   <Input
                     value={propertyAddress}
@@ -425,7 +396,6 @@ export default function App() {
                     placeholder="123 Main St, City, ST"
                   />
                 </FormRow>
-
                 <FormRow label="Buyers Names">
                   <Input
                     value={buyerNames}
@@ -433,7 +403,6 @@ export default function App() {
                     placeholder="Jane & John Doe"
                   />
                 </FormRow>
-
                 <FormRow label="Preferred Settlement Date">
                   <Input
                     type="date"
@@ -441,16 +410,16 @@ export default function App() {
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSettlementDate(e.target.value)}
                   />
                 </FormRow>
-
                 <FormRow label="Available Total Cash ($)">
                   <Input
                     inputMode="numeric"
                     value={totalCash}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTotalCash(e.target.value.replace(/[^0-9]/g, ""))}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setTotalCash(e.target.value.replace(/[^0-9]/g, ""))
+                    }
                     placeholder="e.g., 160000"
                   />
                 </FormRow>
-
                 <FormRow label="Notes">
                   <Textarea
                     value={notes}
@@ -464,12 +433,11 @@ export default function App() {
 
           {/* 3. Financing Method */}
           <Card className="mc-card">
-            <CardContent className="p-5 md:p-6">
+            <CardContent className="p-5 md:p-6 space-y-4">
               <h2 className="text-lg font-medium">3. Financing Method</h2>
-
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
+              <div className="grid gap-3">
                 {FINANCING_OPTIONS.map((opt) => (
-                  <OptionTile
+                  <RadioRow
                     key={opt.id}
                     active={financing === opt.id}
                     label={opt.label}
@@ -477,12 +445,11 @@ export default function App() {
                   />
                 ))}
               </div>
-
-              <div style={{ marginTop: 16 }}>
+              <div className="pt-2">
                 <Label className="text-neutral-200">Down Payment (%)</Label>
-                <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 8 }}>
+                <div className="mt-2 flex items-center gap-4">
                   <Slider value={[downPct]} min={0} max={100} step={1} onValueChange={(v) => setDownPct(v[0])} className="w-full" />
-                  <div style={{ width: 54, textAlign: "right", fontSize: 14 }}>{downPct}%</div>
+                  <div className="w-16 text-right text-sm">{downPct}%</div>
                 </div>
               </div>
             </CardContent>
@@ -490,11 +457,11 @@ export default function App() {
 
           {/* 4. Home Sale Contingency */}
           <Card className="mc-card">
-            <CardContent className="p-5 md:p-6">
+            <CardContent className="p-5 md:p-6 space-y-4">
               <h2 className="text-lg font-medium">4. Home Sale Contingency</h2>
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
+              <div className="grid gap-3 sm:grid-cols-2">
                 {SALE_CONTINGENCY.map((opt) => (
-                  <OptionTile
+                  <RadioRow
                     key={opt.id}
                     active={saleCont === opt.id}
                     label={opt.label}
@@ -507,30 +474,28 @@ export default function App() {
 
           {/* 5. EMD */}
           <Card className="mc-card">
-            <CardContent className="p-5 md:p-6">
+            <CardContent className="p-5 md:p-6 space-y-4">
               <h2 className="text-lg font-medium">5. Earnest Money Deposit (EMD)</h2>
-              <p className="text-sm text-neutral-400" style={{ marginTop: 6 }}>
-                Signals seriousness. Held by title/brokerage and credited at closing.
-              </p>
-              <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 12 }}>
+              <p className="text-sm text-neutral-400">Signals seriousness. Held by title/brokerage and credited at closing.</p>
+              <div className="flex items-center gap-4">
                 <Slider value={[emdPct]} min={0} max={20} step={1} onValueChange={(v) => setEmdPct(v[0])} className="w-full" />
-                <div style={{ width: 64, textAlign: "right", fontSize: 14 }}>{emdPct}%</div>
+                <div className="w-20 text-right text-sm">{emdPct}%</div>
               </div>
-              <div style={{ display: "flex", gap: 8, fontSize: 12, opacity: .8, marginTop: 8, flexWrap: "wrap" }}>
-                <span className="rounded" style={{ background: "rgba(255,255,255,.06)", padding: "4px 8px" }}>2% — Standard</span>
-                <span className="rounded" style={{ background: "rgba(255,255,255,.06)", padding: "4px 8px" }}>5% — Strong</span>
-                <span className="rounded" style={{ background: "rgba(255,255,255,.06)", padding: "4px 8px" }}>10%+ — Very Strong</span>
+              <div className="flex gap-2 text-xs text-neutral-400 flex-wrap">
+                <span className="rounded bg-neutral-800 px-2 py-1">2% — Standard</span>
+                <span className="rounded bg-neutral-800 px-2 py-1">5% — Strong</span>
+                <span className="rounded bg-neutral-800 px-2 py-1">10%+ — Very Strong</span>
               </div>
             </CardContent>
           </Card>
 
           {/* 6. Inspection */}
           <Card className="mc-card">
-            <CardContent className="p-5 md:p-6">
+            <CardContent className="p-5 md:p-6 space-y-4">
               <h2 className="text-lg font-medium">6. Home Inspection Contingency</h2>
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
+              <div className="grid gap-3">
                 {INSPECTION_OPTIONS.map((opt) => (
-                  <OptionTile
+                  <RadioRow
                     key={opt.id}
                     active={inspection === opt.id}
                     label={opt.label}
@@ -538,16 +503,15 @@ export default function App() {
                   />
                 ))}
               </div>
-
               {inspection === "aLaCarte" && (
-                <div style={{ marginTop: 12 }}>
+                <div className="mt-2">
                   <Label className="text-neutral-200">Pick specific tests (optional)</Label>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0,1fr))", gap: 10, marginTop: 10 }}>
+                  <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-4">
                     {["Structural & Mechanical","Mold","Environmental","Radon","Chimney","Lead-Based Paint","Wood Destroying Insect"].map((k) => {
                       const id = k.toLowerCase().replace(/[^a-z0-9]+/g, "-");
                       const checked = inspectionChecks.includes(id);
                       return (
-                        <label key={id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}>
+                        <label key={id} className="flex items-center gap-2 text-sm">
                           <input
                             type="checkbox"
                             checked={checked}
@@ -569,11 +533,11 @@ export default function App() {
 
           {/* 7. Appraisal & Financing Contingency */}
           <Card className="mc-card">
-            <CardContent className="p-5 md:p-6">
+            <CardContent className="p-5 md:p-6 space-y-4">
               <h2 className="text-lg font-medium">7. Appraisal & Financing Contingency</h2>
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
+              <div className="grid gap-3">
                 {APPRAISAL_OPTIONS.map((opt) => (
-                  <OptionTile
+                  <RadioRow
                     key={opt.id}
                     active={appraisal === opt.id}
                     label={opt.label}
@@ -582,7 +546,7 @@ export default function App() {
                 ))}
               </div>
               {appraisal === "gapCover" && (
-                <div style={{ marginTop: 12 }}>
+                <div>
                   <Label className="text-neutral-200">Guarantee to cover appraisal gap up to ($)</Label>
                   <Input
                     inputMode="numeric"
@@ -591,15 +555,14 @@ export default function App() {
                       setGapAmount(Number(e.target.value.replace(/[^0-9]/g, "")) || 0)
                     }
                     placeholder="e.g., 10000"
+                    className="mt-2"
                   />
-                  <p className="mt-1 text-xs text-neutral-400" style={{ marginTop: 6 }}>
-                    +1 score per $5,000 guaranteed (max +10)
-                  </p>
+                  <p className="mt-1 text-xs text-neutral-400">+1 score per $5,000 guaranteed (max +10)</p>
                 </div>
               )}
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 12 }}>
+              <div className="grid gap-3 sm:grid-cols-2">
                 {FINANCING_CONT.map((opt) => (
-                  <OptionTile
+                  <RadioRow
                     key={opt.id}
                     active={finCont === opt.id}
                     label={opt.label}
@@ -612,11 +575,11 @@ export default function App() {
 
           {/* 8. Recordation / Transfer Tax / Title */}
           <Card className="mc-card">
-            <CardContent className="p-5 md:p-6">
+            <CardContent className="p-5 md:p-6 space-y-4">
               <h2 className="text-lg font-medium">8. Recordation / Transfer Tax / Title Company</h2>
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
+              <div className="grid gap-3 md:grid-cols-2">
                 {TAX_TITLE_SPLIT.map((opt) => (
-                  <OptionTile
+                  <RadioRow
                     key={opt.id}
                     active={taxSplit === opt.id}
                     label={opt.label}
@@ -624,7 +587,7 @@ export default function App() {
                   />
                 ))}
                 {TITLE_PREF.map((opt) => (
-                  <OptionTile
+                  <RadioRow
                     key={opt.id}
                     active={titlePref === opt.id}
                     label={opt.label}
@@ -637,11 +600,11 @@ export default function App() {
 
           {/* 9. Commission */}
           <Card className="mc-card">
-            <CardContent className="p-5 md:p-6">
+            <CardContent className="p-5 md:p-6 space-y-4">
               <h2 className="text-lg font-medium">9. Commission</h2>
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
+              <div className="grid gap-3 sm:grid-cols-2">
                 {COMMISSION.map((opt) => (
-                  <OptionTile
+                  <RadioRow
                     key={opt.id}
                     active={commission === opt.id}
                     label={opt.label}
@@ -649,7 +612,7 @@ export default function App() {
                   />
                 ))}
               </div>
-              <p className="text-xs text-neutral-400" style={{ marginTop: 10 }}>
+              <p className="text-xs text-neutral-400">
                 Note: Commission structures are evolving; your agent will confirm what the seller offers on this listing.
               </p>
             </CardContent>
@@ -657,59 +620,64 @@ export default function App() {
 
           {/* 10. Offer Price & Escalation */}
           <Card className="mc-card">
-            <CardContent className="p-5 md:p-6">
+            <CardContent className="p-5 md:p-6 space-y-4">
               <h2 className="text-lg font-medium">10. Offer Price & Escalation</h2>
-
-              <div style={{ display: "grid", gap: 14, marginTop: 16 }}>
+              <div className="grid gap-4">
                 <FormRow label="Seller Asking (List Price)">
                   <Input
                     inputMode="numeric"
                     value={listPrice}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setListPrice(e.target.value.replace(/[^0-9]/g, ""))}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setListPrice(e.target.value.replace(/[^0-9]/g, ""))
+                    }
                     placeholder="e.g., 875000"
                   />
                 </FormRow>
-
                 <FormRow label="Your Offer Price">
                   <Input
                     inputMode="numeric"
                     value={offerPrice}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOfferPrice(e.target.value.replace(/[^0-9]/g, ""))}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setOfferPrice(e.target.value.replace(/[^0-9]/g, ""))
+                    }
                     placeholder="e.g., 895000"
                   />
                 </FormRow>
-
                 <FormRow label="Escalation Up To">
                   <Input
                     inputMode="numeric"
                     value={escalationCap}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEscalationCap(e.target.value.replace(/[^0-9]/g, ""))}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setEscalationCap(e.target.value.replace(/[^0-9]/g, ""))
+                    }
                     placeholder="e.g., 920000"
                   />
                 </FormRow>
-
                 <FormRow label="Escalation By (increment)">
                   <Input
                     inputMode="numeric"
                     value={escalationBy}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEscalationBy(e.target.value.replace(/[^0-9]/g, ""))}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setEscalationBy(e.target.value.replace(/[^0-9]/g, ""))
+                    }
                     placeholder="e.g., 5000"
                   />
                 </FormRow>
+              </div>
 
-                {/* Rent-back — same line layout; label right, options inline */}
-                <FormRow label="Rent-back">
-                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                    {RENTBACK.map((opt) => (
-                      <OptionTile
-                        key={opt.id}
-                        active={rentback === opt.id}
-                        label={opt.label}
-                        onSelect={() => setRentback(opt.id)}
-                      />
-                    ))}
-                  </div>
-                </FormRow>
+              {/* Rent-back — left-aligned option group like sections 1~9 */}
+              <div className="mt-4">
+                <h3 className="text-base font-medium">Rent-back</h3>
+                <div className="mt-3 grid gap-3 md:grid-cols-3">
+                  {RENTBACK.map((opt) => (
+                    <RadioRow
+                      key={opt.id}
+                      active={rentback === opt.id}
+                      label={opt.label}
+                      onSelect={() => setRentback(opt.id)}
+                    />
+                  ))}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -717,12 +685,12 @@ export default function App() {
           {/* Final — Offer Strength (centered) */}
           <Card className="mc-card">
             <CardContent className="p-6 md:p-8" style={{ textAlign: "center" }}>
-              <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <div className="inline-flex items-center justify-center gap-2">
                 <Sparkles className="h-5 w-5 text-neutral-300" />
                 <h2 className="text-xl md:text-2xl font-semibold">Final Offer Strength</h2>
               </div>
 
-              <div style={{ marginTop: 18 }}>
+              <div className="mt-4">
                 <div className="mc-bar" style={{ margin: "0 auto", maxWidth: 560 }}>
                   <motion.div
                     className="mc-bar-fill"
@@ -731,16 +699,16 @@ export default function App() {
                     transition={{ type: "spring", stiffness: 80, damping: 20 }}
                   />
                 </div>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 10 }}>
-                  <div style={{ fontSize: 32, fontWeight: 600 }}>{score}</div>
-                  <div className="rounded-full" style={{ border: "1px solid rgba(255,255,255,.15)", background: "rgba(255,255,255,.08)", padding: "6px 10px", fontSize: 14 }}>
-                    <span style={{ marginRight: 6 }}>{badge.emoji}</span>
+                <div className="mt-3 flex items-center justify-center gap-2">
+                  <div className="text-3xl font-semibold">{score}</div>
+                  <div className="rounded-full border border-neutral-700 bg-neutral-900/60 px-3 py-1 text-sm text-neutral-200">
+                    <span className="mr-1">{badge.emoji}</span>
                     {badge.label}
                   </div>
                 </div>
               </div>
 
-              <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(2, minmax(0,1fr))", maxWidth: 680, margin: "18px auto 0" }}>
+              <div className="mt-4 grid max-w-[680px] grid-cols-2 gap-3 mx-auto">
                 <SummaryKV label="Competition" value={COMPETITION_OPTIONS.find(o=>o.id===competition)?.label || ""} />
                 <SummaryKV label="Financing" value={`${FINANCING_OPTIONS.find(o=>o.id===financing)?.label?.split(" — ")[0]} • ${downPct}% down`} />
                 <SummaryKV label="Appraisal" value={APPRAISAL_OPTIONS.find(o=>o.id===appraisal)?.label || ""} />
@@ -749,14 +717,14 @@ export default function App() {
                 <SummaryKV label="EMD" value={`${emdPct}% of offer`} />
               </div>
 
-              <div style={{ marginTop: 18 }}>
-                <p className="text-sm font-medium" style={{ marginBottom: 8 }}>Recommendations</p>
-                <ul style={{ listStyle: "disc", paddingLeft: 18, margin: "0 auto", textAlign: "left", maxWidth: 680, lineHeight: 1.6 }}>
-                  {getRecommendations(recsState).map((r, i) => (<li key={i} style={{ fontSize: 14 }}>{r}</li>))}
+              <div className="mt-4">
+                <p className="text-sm font-medium mb-2">Recommendations</p>
+                <ul className="mx-auto max-w-[680px] list-disc pl-5 text-left leading-relaxed">
+                  {getRecommendations(recsState).map((r, i) => (<li key={i} className="text-sm">{r}</li>))}
                 </ul>
               </div>
 
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
                 <Button
                   onClick={() => {
                     const txt = `Offer Plan (Score ${score} – ${badge.label})
@@ -778,15 +746,15 @@ ${getRecommendations(recsState).map((x,i)=>`${i+1}. ${x}`).join("\n")}
                 </Button>
               </div>
 
-              <p className="mt-5 text-xs text-neutral-400" style={{ textAlign: "center" }}>
+              <p className="mt-5 text-xs text-neutral-400 text-center">
                 This output is educational. We will finalize with listing feedback and local norms before drafting.
               </p>
             </CardContent>
           </Card>
 
-          {/* Footer — force center */}
-          <div style={{ width: "100%", textAlign: "center" }}>
-            <p className="text-xs text-neutral-500" style={{ marginTop: 8 }}>
+          {/* Footer — center */}
+          <div className="w-full text-center">
+            <p className="text-xs text-neutral-500 mt-2">
               © {new Date().getFullYear()} Maison Collective • Built for client education
             </p>
           </div>
