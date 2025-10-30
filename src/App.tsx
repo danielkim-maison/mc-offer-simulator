@@ -7,6 +7,7 @@ import {
   Sparkles,
   Calendar,
   BarChart3,
+  CheckCircle2,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,14 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 
-/**
- * Maison Collective — Offer Strategy Simulator (v3, single-page, centered)
- * - All questions visible in one scroll (no wizard)
- * - Large click targets, no per-option score hints
- * - Final "Offer Strength" at the bottom as the definitive result section
- */
-
-/* ---------- Options ---------- */
+/* ---------------- Options ---------------- */
 const COMPETITION_OPTIONS = [
   { id: "solo", label: "I am the only offer", weight: +10 },
   { id: "maybe", label: "I expect maybe another", weight: 0 },
@@ -80,7 +74,7 @@ const RENTBACK = [
   { id: "free", label: "Offer seller a free rent-back (30–60 days)", weight: +7 },
 ] as const;
 
-/* ---------- Helpers ---------- */
+/* ---------------- Helpers ---------------- */
 function clamp(n: number, min = 0, max = 100) {
   return Math.max(min, Math.min(max, n));
 }
@@ -110,32 +104,32 @@ function getRecommendations(state: {
   const op = Number(state.offerPrice) || 0;
 
   if (state.competition !== "solo" && (op <= lp)) {
-    rec.push("경쟁 상황이면 제안가를 리스팅가보다 0.5~1.0% 상향하거나, 에스컬레이션을 활성화하세요.");
+    rec.push("In competitive situations, consider offering 0.5–1.0% above list or enabling escalation.");
   }
-  if (state.emdPct < 5) rec.push("EMD를 최소 5% 이상으로 상향하면 진정성을 크게 개선할 수 있습니다.");
+  if (state.emdPct < 5) rec.push("Increase EMD to at least 5% to improve perceived commitment.");
   if (state.financing !== "cash" && state.downPct < 20) {
-    rec.push("다운페이를 20% 이상으로 맞추면 대출 리스크 인식이 줄어듭니다.");
+    rec.push("Target 20%+ down payment to reduce perceived financing risk.");
   }
   if (state.inspection !== "asIs" && state.competition === "competitive") {
-    rec.push("경쟁이 치열하면 점검을 축소(선택항목)하거나 정보용으로 전환을 고려하세요.");
+    rec.push("Under heavy competition, consider a reduced-scope inspection or information-only.");
   }
   if (state.appraisal === "yes" && state.competition !== "solo") {
-    rec.push("감정갭 일부 보장(예: $10k~$25k)은 셀러 불확실성을 줄이는 데 도움 됩니다.");
+    rec.push("Guaranteeing part of any appraisal gap (e.g., $10k–$25k) can lower seller uncertainty.");
   }
   if (state.taxSplit !== "split" || state.titlePref !== "sellerPref") {
-    rec.push("타이틀/세금 분담에서 셀러 선호에 맞추면(셀러 지명 타이틀, 세금 50:50) 협상력이 올라갑니다.");
+    rec.push("Align with seller’s preferred title and standard 50/50 taxes for smoother acceptance.");
   }
   if (state.commission !== "buyerPays" && state.competition === "competitive") {
-    rec.push("바이어측 수수료 일부/전부 부담을 제안하면 경쟁구도에서 매력도가 상승합니다.");
+    rec.push("Offering to pay part/all buyer agency commission may increase attractiveness.");
   }
   if (state.rentback !== "none") {
-    rec.push("렌트백 조건을 명확히(무료 30~60일 or 유상) 표기해 셀러 이사 유연성을 보장하세요.");
+    rec.push("Clarify rent-back terms (free 30–60 days or paid) to support the seller’s move-out timing.");
   }
-  if (rec.length === 0) rec.push("핵심 조합이 균형적입니다. 서면 제안 전에 일정/특약 문구를 에이전트와 최종 점검하세요.");
+  if (rec.length === 0) rec.push("Your selections look balanced. Review timelines/clauses with your agent before drafting.");
   return rec.slice(0, 5);
 }
 
-/* ---------- Reusable UI ---------- */
+/* ------------- Reusable UI: Option Tile (clear active state) ------------- */
 function OptionTile({
   active,
   label,
@@ -145,6 +139,11 @@ function OptionTile({
   label: string;
   onSelect: () => void;
 }) {
+  // 활성화된 상태를 더 눈에 띄게: 체크 아이콘 + 더 밝은 배경/테두리
+  const style: React.CSSProperties = active
+    ? { background: "rgba(255,255,255,.14)", borderColor: "rgba(255,255,255,.55)" }
+    : {};
+
   return (
     <div
       role="radio"
@@ -155,13 +154,20 @@ function OptionTile({
       className="mc-pill flex items-center justify-between rounded-2xl p-4 md:p-5 cursor-pointer outline-none
                  transition focus-visible:ring-2 focus-visible:ring-white/20"
       data-active={active}
+      style={style}
     >
       <div className="flex items-center gap-3 text-sm md:text-base w-full">
-        {/* 커스텀 라디오 */}
-        <span className={`h-5 w-5 rounded-full border ${active ? "bg-white" : "border-white/40"}`} />
+        <span
+          aria-hidden
+          className={`h-5 w-5 rounded-full border flex items-center justify-center ${
+            active ? "border-white" : "border-white/40"
+          }`}
+          style={active ? { background: "rgba(255,255,255,.85)", color: "#111" } : {}}
+        >
+          {active ? <CheckCircle2 size={16} color="#111" /> : null}
+        </span>
         <span className="leading-snug">{label}</span>
       </div>
-      {/* 점수 가중치 표시는 제거 (최종 결과만 보여주기 위함) */}
     </div>
   );
 }
@@ -175,47 +181,47 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-/* ---------- Main ---------- */
+/* ---------------- Main ---------------- */
 export default function App() {
-  // Step 0 — Competition
+  // 0 — Competition
   const [competition, setCompetition] = useState<(typeof COMPETITION_OPTIONS)[number]["id"]>("maybe");
 
-  // Step 1 — Basics
+  // 1 — Basics
   const [propertyAddress, setPropertyAddress] = useState("");
   const [buyerNames, setBuyerNames] = useState("");
   const [settlementDate, setSettlementDate] = useState("");
   const [totalCash, setTotalCash] = useState<string>("");
   const [notes, setNotes] = useState("");
 
-  // Step 2 — Financing
+  // 2 — Financing
   const [financing, setFinancing] = useState<(typeof FINANCING_OPTIONS)[number]["id"]>("conv");
   const [downPct, setDownPct] = useState<number>(20);
 
-  // Step 3 — Home Sale Contingency
+  // 3 — Home Sale Contingency
   const [saleCont, setSaleCont] = useState<(typeof SALE_CONTINGENCY)[number]["id"]>("noSale");
 
-  // Step 4 — EMD
+  // 4 — EMD
   const [emdPct, setEmdPct] = useState<number>(5);
 
-  // Step 5 — Inspections
+  // 5 — Inspections
   const [inspection, setInspection] = useState<(typeof INSPECTION_OPTIONS)[number]["id"]>("aLaCarte");
   const [inspectionChecks, setInspectionChecks] = useState<string[]>([]);
 
-  // Step 6 — Appraisal
+  // 6 — Appraisal
   const [appraisal, setAppraisal] = useState<(typeof APPRAISAL_OPTIONS)[number]["id"]>("yes");
   const [gapAmount, setGapAmount] = useState<number>(0);
 
-  // Step 7 — Financing Contingency
+  // 7 — Financing Contingency
   const [finCont, setFinCont] = useState<(typeof FINANCING_CONT)[number]["id"]>("yes");
 
-  // Step 8 — Taxes/Title
+  // 8 — Taxes/Title
   const [taxSplit, setTaxSplit] = useState<(typeof TAX_TITLE_SPLIT)[number]["id"]>("split");
   const [titlePref, setTitlePref] = useState<(typeof TITLE_PREF)[number]["id"]>("sellerPref");
 
-  // Step 9 — Commission
+  // 9 — Commission
   const [commission, setCommission] = useState<(typeof COMMISSION)[number]["id"]>("sellerPays");
 
-  // Step 10 — Price & extras
+  // 10 — Price & extras
   const [listPrice, setListPrice] = useState<number | string>("");
   const [offerPrice, setOfferPrice] = useState<number | string>("");
   const [escalationCap, setEscalationCap] = useState<number | string>("");
@@ -224,7 +230,7 @@ export default function App() {
 
   // Derived score
   const score = useMemo(() => {
-    let s = 60; // base
+    let s = 60;
 
     s += COMPETITION_OPTIONS.find(o => o.id === competition)!.weight;
     s += FINANCING_OPTIONS.find(o => o.id === financing)!.weight;
@@ -241,10 +247,8 @@ export default function App() {
     if (appraisal === "gapCover") s += Math.min(10, Math.floor(gapAmount / 5000));
 
     s += FINANCING_CONT.find(o => o.id === finCont)!.weight;
-
     s += TAX_TITLE_SPLIT.find(o => o.id === taxSplit)!.weight;
     s += TITLE_PREF.find(o => o.id === titlePref)!.weight;
-
     s += COMMISSION.find(o => o.id === commission)!.weight;
     s += RENTBACK.find(o => o.id === rentback)!.weight;
 
@@ -323,9 +327,8 @@ export default function App() {
 
   return (
     <div className="mc-bg min-h-screen">
-      {/* 중앙 정렬 컨테이너 (양옆 과도한 비움 방지 + 가운데 정렬) */}
       <div className="mx-auto w-full max-w-4xl px-5 sm:px-6 lg:px-8 py-8 lg:py-10">
-        {/* Header — 중앙 제목 */}
+        {/* Header (centered) */}
         <div className="text-center">
           <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
             Maison Collective — Offer Strategy Simulator
@@ -343,13 +346,12 @@ export default function App() {
           </div>
         </div>
 
-        {/* Sections (모두 한 페이지에) */}
         <div className="mt-8 space-y-6">
-          {/* Competition */}
+          {/* 1. Competition */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-medium">First Question: Competition</h2>
+                <h2 className="text-lg font-medium">1. Competition</h2>
                 <Info className="h-4 w-4 text-neutral-400" />
               </div>
               <p className="mt-1 text-sm text-neutral-400">
@@ -368,16 +370,13 @@ export default function App() {
             </CardContent>
           </Card>
 
-          {/* Basics */}
+          {/* 2. Basic Information */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6 space-y-4">
               <div className="flex items-center justify-center gap-2">
                 <Calendar className="h-4 w-4 text-neutral-400" />
-                <h2 className="text-lg font-medium text-center">Step 1: Basic Information</h2>
+                <h2 className="text-lg font-medium text-center">2. Basic Information</h2>
               </div>
-              <p className="text-sm text-neutral-400 text-center">
-                Align with seller’s preferred settlement date and clarify your cash flow.
-              </p>
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <Label className="text-neutral-200">Property Address</Label>
@@ -424,16 +423,13 @@ export default function App() {
             </CardContent>
           </Card>
 
-          {/* Financing */}
+          {/* 3. Financing Method */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6 space-y-4">
               <div className="flex items-center justify-center gap-2">
                 <BarChart3 className="h-4 w-4 text-neutral-400" />
-                <h2 className="text-lg font-medium text-center">Step 2: Financing Method</h2>
+                <h2 className="text-lg font-medium text-center">3. Financing Method</h2>
               </div>
-              <p className="text-sm text-neutral-400 text-center">
-                Sellers tend to see cash as lowest risk; higher down payments strengthen financed offers.
-              </p>
               <div className="grid gap-3">
                 {FINANCING_OPTIONS.map((opt) => (
                   <OptionTile
@@ -454,10 +450,10 @@ export default function App() {
             </CardContent>
           </Card>
 
-          {/* Home Sale Contingency */}
+          {/* 4. Home Sale Contingency */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6 space-y-4">
-              <h2 className="text-lg font-medium text-center">Home Sale Contingency</h2>
+              <h2 className="text-lg font-medium text-center">4. Home Sale Contingency</h2>
               <div className="grid gap-3 sm:grid-cols-2">
                 {SALE_CONTINGENCY.map((opt) => (
                   <OptionTile
@@ -471,10 +467,10 @@ export default function App() {
             </CardContent>
           </Card>
 
-          {/* EMD */}
+          {/* 5. Earnest Money Deposit (EMD) */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6 space-y-4">
-              <h2 className="text-lg font-medium text-center">Earnest Money Deposit (EMD)</h2>
+              <h2 className="text-lg font-medium text-center">5. Earnest Money Deposit (EMD)</h2>
               <p className="text-sm text-neutral-400 text-center">Signals seriousness. Held by title/brokerage and credited at closing.</p>
               <div className="flex items-center gap-4">
                 <Slider value={[emdPct]} min={0} max={20} step={1} onValueChange={(v) => setEmdPct(v[0])} className="w-full" />
@@ -488,10 +484,10 @@ export default function App() {
             </CardContent>
           </Card>
 
-          {/* Inspection */}
+          {/* 6. Home Inspection Contingency */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6 space-y-4">
-              <h2 className="text-lg font-medium text-center">Home Inspection Contingency</h2>
+              <h2 className="text-lg font-medium text-center">6. Home Inspection Contingency</h2>
               <div className="grid gap-3">
                 {INSPECTION_OPTIONS.map((opt) => (
                   <OptionTile
@@ -530,10 +526,10 @@ export default function App() {
             </CardContent>
           </Card>
 
-          {/* Appraisal & Financing Contingency */}
+          {/* 7. Appraisal & Financing Contingency */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6 space-y-4">
-              <h2 className="text-lg font-medium text-center">Appraisal & Financing Contingency</h2>
+              <h2 className="text-lg font-medium text-center">7. Appraisal & Financing Contingency</h2>
               <div className="grid gap-3">
                 {APPRAISAL_OPTIONS.map((opt) => (
                   <OptionTile
@@ -571,10 +567,10 @@ export default function App() {
             </CardContent>
           </Card>
 
-          {/* Taxes/Title */}
+          {/* 8. Recordation / Transfer Tax / Title Company */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6 space-y-4">
-              <h2 className="text-lg font-medium text-center">Recordation / Transfer Tax / Title Company</h2>
+              <h2 className="text-lg font-medium text-center">8. Recordation / Transfer Tax / Title Company</h2>
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-3">
                   {TAX_TITLE_SPLIT.map((opt) => (
@@ -600,10 +596,10 @@ export default function App() {
             </CardContent>
           </Card>
 
-          {/* Commission */}
+          {/* 9. Commission */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6 space-y-4">
-              <h2 className="text-lg font-medium text-center">Commission</h2>
+              <h2 className="text-lg font-medium text-center">9. Commission</h2>
               <div className="grid gap-3 sm:grid-cols-2">
                 {COMMISSION.map((opt) => (
                   <OptionTile
@@ -620,13 +616,10 @@ export default function App() {
             </CardContent>
           </Card>
 
-          {/* Offer Price & Escalation */}
+          {/* 10. Offer Price & Escalation */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6 space-y-4">
-              <h2 className="text-lg font-medium text-center">Offer Price & Escalation</h2>
-              <p className="text-sm text-neutral-400 text-center">
-                List price is a starting point; competitiveness may warrant an escalation.
-              </p>
+              <h2 className="text-lg font-medium text-center">10. Offer Price & Escalation</h2>
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <Label className="text-neutral-200">Seller Asking (List Price)</Label>
@@ -707,7 +700,7 @@ export default function App() {
                 </div>
               </div>
 
-              {/* 핵심 요약 (필요 최소만) */}
+              {/* brief summary */}
               <div className="mt-6 grid gap-3 text-sm md:grid-cols-2">
                 <SummaryRow label="Competition" value={COMPETITION_OPTIONS.find(o=>o.id===competition)?.label || ""} />
                 <SummaryRow label="Financing" value={`${FINANCING_OPTIONS.find(o=>o.id===financing)?.label?.split(" — ")[0]} • ${downPct}% down`} />
@@ -717,7 +710,7 @@ export default function App() {
                 <SummaryRow label="EMD" value={`${emdPct}% of offer`} />
               </div>
 
-              {/* 권고안 */}
+              {/* recommendations (EN) */}
               <div className="mt-6">
                 <p className="text-sm font-medium mb-2 text-center">Recommendations</p>
                 <ul className="list-disc pl-5 space-y-1 text-sm text-neutral-200 max-w-2xl mx-auto">
@@ -725,7 +718,6 @@ export default function App() {
                 </ul>
               </div>
 
-              {/* 액션 */}
               <div className="mt-6 flex items-center justify-center gap-2">
                 <Button
                   onClick={() => {
@@ -754,7 +746,6 @@ ${getRecommendations(recsState).map((x,i)=>`${i+1}. ${x}`).join("\n")}
             </CardContent>
           </Card>
 
-          {/* Footer */}
           <p className="text-center text-xs text-neutral-500">
             © {new Date().getFullYear()} Maison Collective • Built for client education
           </p>
