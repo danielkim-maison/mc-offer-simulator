@@ -1,51 +1,62 @@
-/* ---- Modern theme tokens ---- */
+ï»¿/* =========================
+   Maison Collective â€” UI Theme
+   Clean, minimal, no grid lines
+   ========================= */
+
+/* ---- Tokens ---- */
 :root {
   --mc-bg: 10 10 10;           /* #0a0a0a */
   --mc-fg: 229 229 229;        /* #e5e5e5 */
   --mc-muted: 160 160 160;     /* #a0a0a0 */
-  --mc-card: 17 17 17;         /* #111 */
-  --mc-border: 255 255 255;    /* white border, we¡¯ll lower opacity inline */
+  --mc-card: 17 17 17;         /* #111111 */
+  --mc-border: 255 255 255;    /* use with low opacity */
   --mc-brand-1: 99 102 241;    /* indigo-500 */
   --mc-brand-2: 59 130 246;    /* blue-500 */
   --mc-brand-3: 236 72 153;    /* pink-500 */
 }
 
+/* ---- Global reset-ish ---- */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
 html, body, #root { height: 100%; }
+
 body {
+  margin: 0;
   background: rgb(var(--mc-bg));
   color: rgb(var(--mc-fg));
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji;
 }
 
-/* Subtle grain + gradient layers (performance-friendly) */
+/* ---- Page background (no grid lines) ----
+   - soft vignette with two subtle radial gradients */
 .mc-bg {
   position: relative;
   isolation: isolate;
   background:
-    radial-gradient(1200px 600px at 80% -10%, rgba(99,102,241,.18), transparent 60%),
-    radial-gradient(900px 500px at -10% 10%, rgba(236,72,153,.12), transparent 55%),
-    linear-gradient(to bottom, rgba(59,130,246,.08), transparent 30%);
+    radial-gradient(1000px 600px at 70% -10%, rgba(99,102,241,.10), transparent 60%),
+    radial-gradient(900px 520px at -10% 5%, rgba(236,72,153,.08), transparent 55%),
+    rgb(var(--mc-bg));
 }
-.mc-bg::before {
-  content: "";
-  position: absolute; inset: 0;
-  pointer-events: none;
-  opacity: .25;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' opacity='.25' viewBox='0 0 32 32'%3E%3Cpath fill='%23fff' d='M0 32h32V0H0v32ZM16 1h1v30h-1zM1 16h30v1H1z'/%3E%3C/svg%3E");
-  mix-blend-mode: soft-light;
-}
+/* remove any overlay layer */
+.mc-bg::before { content: none; }
 
-/* Frosted ¡°glass¡± card & hairline border */
+/* ---- Card (frosted) ---- */
 .mc-card {
-  background: rgba(var(--mc-card), .7);
-  border: 1px solid rgba(var(--mc-border), .08);
-  backdrop-filter: blur(8px);
+  background: rgba(var(--mc-card), .80);
+  border: 1px solid rgba(var(--mc-border), .10);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   box-shadow:
     0 1px 0 rgba(255,255,255,.05) inset,
     0 10px 30px rgba(0,0,0,.35);
   border-radius: 16px;
 }
 
-/* Gradient button */
+/* ---- Buttons ---- */
 .mc-btn {
   background-image: linear-gradient(135deg,
     rgb(var(--mc-brand-1)) 0%,
@@ -53,24 +64,44 @@ body {
     rgb(var(--mc-brand-3)) 100%);
   color: #0a0a0a;
   font-weight: 700;
+  border: 0;
+  border-radius: 12px;
+  transition: transform .08s ease, filter .2s ease, box-shadow .2s ease;
+  box-shadow: 0 6px 20px rgba(99,102,241,.25);
 }
-.mc-btn:hover { filter: brightness(1.05); }
+.mc-btn:hover { filter: brightness(1.06); }
+.mc-btn:active { transform: translateY(1px); }
+
 .mc-btn-secondary {
   background: rgba(255,255,255,.06);
-  border: 1px solid rgba(var(--mc-border), .1);
+  color: rgb(var(--mc-fg));
+  border: 1px solid rgba(var(--mc-border), .10);
+  border-radius: 12px;
+  transition: background .2s ease, border-color .2s ease;
+}
+.mc-btn-secondary:hover {
+  background: rgba(255,255,255,.10);
+  border-color: rgba(var(--mc-border), .18);
 }
 
-/* Segmented pills */
+/* ---- Segmented pills ---- */
 .mc-pill {
-  border: 1px solid rgba(var(--mc-border), .08);
+  border: 1px solid rgba(var(--mc-border), .10);
   background: rgba(255,255,255,.04);
+  border-radius: 14px;
+  transition: background .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+.mc-pill:hover {
+  background: rgba(255,255,255,.06);
+  border-color: rgba(var(--mc-border), .16);
 }
 .mc-pill[data-active="true"] {
-  border-color: rgba(255,255,255,.6);
-  background: rgba(255,255,255,.08);
+  border-color: rgba(255,255,255,.55);
+  background: rgba(255,255,255,.10);
+  box-shadow: 0 0 0 3px rgba(255,255,255,.06);
 }
 
-/* Score bar */
+/* ---- Score bar ---- */
 .mc-bar {
   height: 12px;
   border-radius: 999px;
@@ -84,5 +115,34 @@ body {
     rgb(var(--mc-brand-1)),
     rgb(var(--mc-brand-2)),
     rgb(var(--mc-brand-3)));
-  box-shadow: 0 0 20px rgba(99,102,241,.45);
+  box-shadow: 0 0 18px rgba(99,102,241,.35);
+}
+
+/* ---- Form base styles (for our UI stubs) ---- */
+input[type="text"],
+input[type="date"],
+input[type="number"],
+input[type="range"],
+textarea {
+  font: inherit;
+}
+
+input[type="text"],
+input[type="date"],
+input[type="number"],
+textarea {
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(var(--mc-border), .10);
+  color: rgb(var(--mc-fg));
+  border-radius: 12px;
+}
+
+input::placeholder,
+textarea::placeholder { color: rgb(var(--mc-muted)); }
+
+/* Better focus ring */
+:where(input, textarea, button):focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255,255,255,.10);
+  border-color: rgba(var(--mc-border), .18);
 }
