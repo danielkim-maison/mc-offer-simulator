@@ -16,14 +16,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 
 /**
- * Maison Collective — Offer Strategy Simulator (v1)
- * Single-file React component (Tailwind + shadcn/ui or stubs)
- * - No backend. All calculations run client-side.
- * - Export scenario as JSON (Download button).
- * - Desktop & mobile friendly.
+ * Maison Collective — Offer Strategy Simulator (v2, guided)
+ * - Step-based UX, large clickable tiles, clear final panel with recommendations
+ * - No backend; all client-side
  */
 
-/* -------------------- 옵션 -------------------- */
+/* ---------- Options & Types ---------- */
 const COMPETITION_OPTIONS = [
   { id: "solo", label: "I am the only offer", weight: +10 },
   { id: "maybe", label: "I expect maybe another", weight: 0 },
@@ -81,11 +79,10 @@ const RENTBACK = [
   { id: "free", label: "Offer seller a free rent-back (30–60 days)", weight: +7 },
 ] as const;
 
-/* -------------------- 헬퍼 -------------------- */
+/* ---------- Helpers ---------- */
 function clamp(n: number, min = 0, max = 100) {
   return Math.max(min, Math.min(max, n));
 }
-
 function labelForScore(score: number) {
   if (score >= 85) return { label: "Elite", emoji: "🚀" };
   if (score >= 70) return { label: "Strong", emoji: "💪" };
@@ -93,18 +90,207 @@ function labelForScore(score: number) {
   return { label: "Needs Work", emoji: "🧩" };
 }
 
-/* ===========================================================
-   메인 컴포넌트
-=========================================================== */
-export default function OfferStrategySimulator() {
+/* ---------- Recs ---------- */
+function getRecommendations(state: {
+  competition: typeof COMPETITION_OPTIONS[number]["id"];
+  financing: typeof FINANCING_OPTIONS[number]["id"];
+  downPct: number;
+  emdPct: number;
+  inspection: typeof INSPECTION_OPTIONS[number]["id"];
+  appraisal: typeof APPRAISAL_OPTIONS[number]["id"];
+  finCont: typeof FINANCING_CONT[number]["id"];
+  taxSplit: typeof TAX_TITLE_SPLIT[number]["id"];
+  titlePref: typeof TITLE_PREF[number]["id"];
+  commission: typeof COMMISSION[number]["id"];
+  listPrice: number | string;
+  offerPrice: number | string;
+  rentback: typeof RENTBACK[number]["id"];
+}): string[] {
+  const rec: string[] = [];
+  const lp = Number(state.listPrice) || 0;
+  const op = Number(state.offerPrice) || 0;
+
+  if (state.competition !== "solo" && (op <= lp)) {
+    rec.push("경쟁 상황이면 제안가를 리스팅가보다 0.5~1.0% 상향하거나, 에스컬레이션을 활성화하세요.");
+  }
+  if (state.emdPct < 5) rec.push("EMD를 최소 5% 이상으로 상향하면 진정성을 크게 개선할 수 있습니다.");
+  if (state.financing !== "cash" && state.downPct < 20) {
+    rec.push("다운페이를 20% 이상으로 맞추면 대출 리스크 인식이 줄어듭니다.");
+  }
+  if (state.inspection !== "asIs" && state.competition === "competitive") {
+    rec.push("경쟁이 치열하면 점검을 축소(선택항목)하거나 정보용으로 전환을 고려하세요.");
+  }
+  if (state.appraisal === "yes" && state.competition !== "solo") {
+    rec.push("감정갭 일부 보장(예: $10k~$25k)은 셀러 불확실성을 줄이는 데 도움 됩니다.");
+  }
+  if (state.taxSplit !== "split" || state.titlePref !== "sellerPref") {
+    rec.push("타이틀/세금 분담에서 셀러 선호에 맞추면(셀러 지명 타이틀, 세금 50:50) 협상력이 올라갑니다.");
+  }
+  if (state.commission !== "buyerPays" && state.competition === "competitive") {
+    rec.push("바이어측 수수료 일부/전부 부담을 제안하면 경쟁구도에서 매력도가 상승합니다.");
+  }
+  if (state.rentback !== "none") {
+    rec.push("렌트백 조건을 명확히(무료 30~60일 or 유상) 표기해 셀러 이사 유연성을 보장하세요.");
+  }
+  if (rec.length === 0) rec.push("핵심 조합이 균형적입니다. 서면 제안 전에 일정/특약 문구를 에이전트와 최종 점검하세요.");
+
+  return rec.slice(0, 5);
+}
+
+/* ---------- Reusable UI ---------- */
+function OptionTile({
+  active,
+  label,
+  weight,
+  onSelect,
+}: {
+  active: boolean;
+  label: string;
+  weight?: number;
+  onSelect: () => void;
+}) {
+  return (
+    <div
+      role="radio"
+      aria-checked={active}
+      tabIndex={0}
+      onClick={onSelect}
+      onKeyDown={(e) => ((e.key === "Enter" || e.key === " ") && onSelect())}
+      className="mc-pill flex items-center justify-between rounded-2xl p-4 md:p-5 cursor-pointer outline-none
+                 transition focus-visible:ring-2 focus-visible:ring-white/20"
+      data-active={active}
+    >
+      <div className="flex items-center gap-3 text-sm md:text-base">
+        <span className={`h-5 w-5 rounded-full border ${active ? "bg-white" : "border-white/40"}`} />
+        <span>{label}</span>
+      </div>
+      {typeof weight === "number" && (
+        <span className="text-xs text-neutral-400">{weight >= 0 ? `+${weight}` : weight}</span>
+      )}
+    </div>
+  );
+}
+
+function StepNav({
+  step,
+  total,
+  canPrev,
+  canNext,
+  onPrev,
+  onNext,
+  onFinish,
+}: {
+  step: number;
+  total: number;
+  canPrev: boolean;
+  canNext: boolean;
+  onPrev: () => void;
+  onNext: () => void;
+  onFinish: () => void;
+}) {
+  return (
+    <div className="fixed inset-x-0 bottom-0 z-40">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-6">
+        <div className="mc-card flex items-center justify-between p-3 md:p-4">
+          <div className="text-sm text-neutral-400">Step {step + 1} of {total}</div>
+          <div className="flex gap-2">
+            <Button variant="secondary" disabled={!canPrev} onClick={onPrev}>Back</Button>
+            {step < total - 1 ? (
+              <Button disabled={!canNext} onClick={onNext}>Next</Button>
+            ) : (
+              <Button onClick={onFinish}>Generate Plan</Button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FinalPanel({
+  score, badge, state,
+}: {
+  score: number;
+  badge: { label: string; emoji: string };
+  state: any;
+}) {
+  const recs = getRecommendations(state);
+  return (
+    <div className="mc-card p-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-base font-medium">Final Offer Plan</h3>
+        <span className="text-sm opacity-70">Auto-generated</span>
+      </div>
+
+      <div className="mt-4">
+        <div className="mc-bar">
+          <motion.div className="mc-bar-fill" initial={{ width: 0 }} animate={{ width: `${score}%` }} />
+        </div>
+        <div className="mt-3 flex items-center justify-between">
+          <div className="text-3xl font-semibold">{score}</div>
+          <div className="rounded-full border border-white/15 bg-white/8 px-3 py-1 text-sm text-neutral-200">
+            <span className="mr-1">{badge.emoji}</span>{badge.label}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-5 space-y-2 text-sm">
+        <div className="opacity-80">• Competition: <b>{COMPETITION_OPTIONS.find(o=>o.id===state.competition)?.label}</b></div>
+        <div className="opacity-80">• Financing: <b>{FINANCING_OPTIONS.find(o=>o.id===state.financing)?.label?.split(" — ")[0]}</b> / {state.downPct}% down</div>
+        <div className="opacity-80">• Appraisal: <b>{APPRAISAL_OPTIONS.find(o=>o.id===state.appraisal)?.label}</b></div>
+        <div className="opacity-80">• Price: List ${Number(state.listPrice||0).toLocaleString()} → Offer ${Number(state.offerPrice||0).toLocaleString()}</div>
+      </div>
+
+      <div className="mt-6">
+        <p className="text-sm font-medium mb-2">Recommendations</p>
+        <ul className="list-disc pl-5 space-y-1 text-sm text-neutral-200">
+          {recs.map((r: string, i: number) => (<li key={i}>{r}</li>))}
+        </ul>
+      </div>
+
+      <div className="mt-6 flex gap-2">
+        <Button
+          onClick={() => {
+            const txt = `Offer Plan (Score ${score} – ${badge.label})
+- Competition: ${COMPETITION_OPTIONS.find(o=>o.id===state.competition)?.label}
+- Financing: ${FINANCING_OPTIONS.find(o=>o.id===state.financing)?.label?.split(" — ")[0]} / ${state.downPct}% down
+- Appraisal: ${APPRAISAL_OPTIONS.find(o=>o.id===state.appraisal)?.label}
+- Price: List $${Number(state.listPrice||0).toLocaleString()} → Offer $${Number(state.offerPrice||0).toLocaleString()}
+Recommendations:
+${recs.map((x:string,i:number)=>`${i+1}. ${x}`).join("\n")}
+`;
+            navigator.clipboard.writeText(txt);
+            alert("Copied final plan to clipboard.");
+          }}
+        >
+          Copy Plan
+        </Button>
+        <Button variant="secondary" className="mc-btn-secondary" onClick={() => window.print()}>
+          Print
+        </Button>
+      </div>
+
+      <p className="mt-5 text-xs text-neutral-400">
+        This output is educational. We will finalize with listing feedback and local norms before drafting.
+      </p>
+    </div>
+  );
+}
+
+/* ---------- Main ---------- */
+export default function App() {
+  // Wizard step
+  const [step, setStep] = useState<number>(0);
+  const totalSteps = 4;
+
   // Step 0 — Competition
   const [competition, setCompetition] = useState<(typeof COMPETITION_OPTIONS)[number]["id"]>("maybe");
 
-  // Step 1 — Basic
+  // Step 1 — Basics
   const [propertyAddress, setPropertyAddress] = useState("");
   const [buyerNames, setBuyerNames] = useState("");
   const [settlementDate, setSettlementDate] = useState("");
-  const [totalCash, setTotalCash] = useState<string>("");
+  const [totalCash, setTotalCash] = useState<string>(""); // numeric string
   const [notes, setNotes] = useState("");
 
   // Step 2 — Financing
@@ -117,7 +303,7 @@ export default function OfferStrategySimulator() {
   // Step 4 — EMD
   const [emdPct, setEmdPct] = useState<number>(5);
 
-  // Step 5 — Inspection
+  // Step 5 — Inspections
   const [inspection, setInspection] = useState<(typeof INSPECTION_OPTIONS)[number]["id"]>("aLaCarte");
   const [inspectionChecks, setInspectionChecks] = useState<string[]>([]);
 
@@ -142,29 +328,30 @@ export default function OfferStrategySimulator() {
   const [escalationBy, setEscalationBy] = useState<number | string>("");
   const [rentback, setRentback] = useState<(typeof RENTBACK)[number]["id"]>("none");
 
-  // Derived score
   const score = useMemo(() => {
-    let s = 60; // neutral base
+    let s = 60; // base
 
-    s += COMPETITION_OPTIONS.find((o) => o.id === competition)!.weight;
-    s += FINANCING_OPTIONS.find((o) => o.id === financing)!.weight;
-    s += Math.min(20, Math.max(0, (downPct - 10) * 0.6)); // +0.6 per 1% over 10, cap +20
-    s += SALE_CONTINGENCY.find((o) => o.id === saleCont)!.weight;
+    s += COMPETITION_OPTIONS.find(o => o.id === competition)!.weight;
+    s += FINANCING_OPTIONS.find(o => o.id === financing)!.weight;
+    s += Math.min(20, Math.max(0, (downPct - 10) * 0.6));
+    s += SALE_CONTINGENCY.find(o => o.id === saleCont)!.weight;
 
     if (emdPct >= 10) s += 12;
     else if (emdPct >= 5) s += 6;
     else if (emdPct >= 2) s += 2;
     else s -= 4;
 
-    s += INSPECTION_OPTIONS.find((o) => o.id === inspection)!.weight;
-    s += APPRAISAL_OPTIONS.find((o) => o.id === appraisal)!.weight;
-    if (appraisal === "gapCover") s += Math.min(10, Math.floor(gapAmount / 5000)); // +1 per $5k, cap +10
+    s += INSPECTION_OPTIONS.find(o => o.id === inspection)!.weight;
+    s += APPRAISAL_OPTIONS.find(o => o.id === appraisal)!.weight;
+    if (appraisal === "gapCover") s += Math.min(10, Math.floor(gapAmount / 5000));
 
-    s += FINANCING_CONT.find((o) => o.id === finCont)!.weight;
-    s += TAX_TITLE_SPLIT.find((o) => o.id === taxSplit)!.weight;
-    s += TITLE_PREF.find((o) => o.id === titlePref)!.weight;
-    s += COMMISSION.find((o) => o.id === commission)!.weight;
-    s += RENTBACK.find((o) => o.id === rentback)!.weight;
+    s += FINANCING_CONT.find(o => o.id === finCont)!.weight;
+
+    s += TAX_TITLE_SPLIT.find(o => o.id === taxSplit)!.weight;
+    s += TITLE_PREF.find(o => o.id === titlePref)!.weight;
+
+    s += COMMISSION.find(o => o.id === commission)!.weight;
+    s += RENTBACK.find(o => o.id === rentback)!.weight;
 
     const lp = Number(listPrice) || 0;
     const op = Number(offerPrice) || 0;
@@ -176,24 +363,12 @@ export default function OfferStrategySimulator() {
 
     return clamp(Math.round(s));
   }, [
-    competition,
-    financing,
-    downPct,
-    saleCont,
-    emdPct,
-    inspection,
-    appraisal,
-    gapAmount,
-    finCont,
-    taxSplit,
-    titlePref,
-    commission,
-    rentback,
-    listPrice,
-    offerPrice,
+    competition, financing, downPct, saleCont, emdPct, inspection, appraisal,
+    gapAmount, finCont, taxSplit, titlePref, commission, rentback, listPrice, offerPrice
   ]);
-
   const badge = useMemo(() => labelForScore(score), [score]);
+
+  const [showFinal, setShowFinal] = useState(false);
 
   function downloadScenario() {
     const data = {
@@ -223,570 +398,526 @@ export default function OfferStrategySimulator() {
   }
 
   function resetAll() {
+    setStep(0);
     setCompetition("maybe");
-    setPropertyAddress(""); setBuyerNames(""); setSettlementDate(""); setTotalCash(""); setNotes("");
-    setFinancing("conv"); setDownPct(20); setSaleCont("noSale"); setEmdPct(5);
-    setInspection("aLaCarte"); setInspectionChecks([]);
-    setAppraisal("yes"); setGapAmount(0); setFinCont("yes");
-    setTaxSplit("split"); setTitlePref("sellerPref"); setCommission("sellerPays");
-    setListPrice(""); setOfferPrice(""); setEscalationCap(""); setEscalationBy(""); setRentback("none");
+    setPropertyAddress("");
+    setBuyerNames("");
+    setSettlementDate("");
+    setTotalCash("");
+    setNotes("");
+    setFinancing("conv");
+    setDownPct(20);
+    setSaleCont("noSale");
+    setEmdPct(5);
+    setInspection("aLaCarte");
+    setInspectionChecks([]);
+    setAppraisal("yes");
+    setGapAmount(0);
+    setFinCont("yes");
+    setTaxSplit("split");
+    setTitlePref("sellerPref");
+    setCommission("sellerPays");
+    setListPrice("");
+    setOfferPrice("");
+    setEscalationCap("");
+    setEscalationBy("");
+    setRentback("none");
+    setShowFinal(false);
   }
+
+  // 간단한 next 제한: 가격 스텝에서 offerPrice 필요
+  const canGoNext = (() => {
+    if (step === 2) return Boolean(offerPrice);
+    return true;
+  })();
+
+  const stateForRecs = {
+    competition, financing, downPct, emdPct, inspection, appraisal, finCont,
+    taxSplit, titlePref, commission, listPrice, offerPrice, rentback,
+  };
 
   return (
     <div className="mc-bg min-h-screen">
-      <div className="mx-auto max-w-7xl px-4 py-10">
-        {/* ---------- Hero ---------- */}
-        <header className="mb-8">
-          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-neutral-300">
-                <Sparkles className="h-3.5 w-3.5" />
-                Interactive • No sign-in required
-              </div>
-              <h1 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">
-                Maison Collective —{" "}
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-blue-400 to-pink-400">
-                  Offer Strategy Simulator
-                </span>
-              </h1>
-              <p className="mt-2 max-w-2xl text-sm text-neutral-400">
-                Adjust terms and instantly see your offer strength. Export scenarios and finalize with your agent.
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Button className="mc-btn px-4" onClick={downloadScenario}>
-                <Download className="mr-2 h-4 w-4" /> Download JSON
-              </Button>
-              <Button variant="secondary" className="mc-btn-secondary px-4 text-neutral-200" onClick={resetAll}>
-                <RefreshCcw className="mr-2 h-4 w-4" /> Reset
-              </Button>
-            </div>
+      <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8 py-8 lg:py-10">
+        {/* Header */}
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
+              Maison Collective — Offer Strategy Simulator
+            </h1>
+            <p className="mt-1 text-sm text-neutral-400">
+              Guided steps. Make choices, learn the trade-offs, and generate a final plan.
+            </p>
           </div>
-        </header>
+          <div className="flex gap-2">
+            <Button variant="secondary" className="mc-btn-secondary" onClick={resetAll}>
+              <RefreshCcw className="mr-2 h-4 w-4" /> Reset
+            </Button>
+            <Button onClick={downloadScenario}>
+              <Download className="mr-2 h-4 w-4" /> Download JSON
+            </Button>
+          </div>
+        </div>
 
-        {/* ---------- Layout ---------- */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          {/* LEFT: Controls */}
+        {/* Progress bar */}
+        <div className="mt-4 h-2 w-full rounded-full bg-white/10 overflow-hidden">
+          <motion.div
+            className="h-full bg-white"
+            initial={false}
+            animate={{ width: `${((step + 1) / totalSteps) * 100}%` }}
+            transition={{ type: "spring", stiffness: 80, damping: 18 }}
+          />
+        </div>
+
+        {/* Main grid */}
+        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
+          {/* Left column (forms) */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Step 0: Competition */}
-            <Section title="First Question: Competition" icon={<Info className="h-4 w-4 text-neutral-400" />}>
-              <p className="mt-1 text-sm text-neutral-400">Is there a competition or are you the only offer? Choose one.</p>
-              <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                {COMPETITION_OPTIONS.map((opt) => (
-                  <label
-                    key={opt.id}
-                    className="mc-pill flex cursor-pointer items-center justify-between rounded-xl p-3 transition"
-                    data-active={competition === opt.id}
-                  >
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="radio"
-                        name="competition"
-                        className="h-4 w-4"
-                        checked={competition === opt.id}
-                        onChange={() => setCompetition(opt.id)}
-                      />
-                      <span className="text-sm">{opt.label}</span>
+            {/* STEP 0: Competition + Basics */}
+            {step === 0 && (
+              <>
+                <Card className="mc-card">
+                  <CardContent className="p-5 md:p-6">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-lg font-medium">First Question: Competition</h2>
+                      <Info className="h-4 w-4 text-neutral-400" />
                     </div>
-                    <span className="text-xs text-neutral-400">
-                      {opt.weight >= 0 ? `+${opt.weight}` : opt.weight}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </Section>
-
-            {/* Step 1: Basics */}
-            <Section title="Step 1: Basic Information" icon={<Calendar className="h-4 w-4 text-neutral-400" />}>
-              <p className="text-sm text-neutral-400">
-                Aligning with the seller’s preferred settlement date strengthens your offer. Understanding your cash flow is critical.
-              </p>
-              <div className="grid gap-4 md:grid-cols-2 mt-3">
-                <Field label="Property Address">
-                  <Input
-                    value={propertyAddress}
-                    onChange={(e) => setPropertyAddress(e.target.value)}
-                    placeholder="123 Main St, City, ST"
-                  />
-                </Field>
-                <Field label="Buyers Names">
-                  <Input
-                    value={buyerNames}
-                    onChange={(e) => setBuyerNames(e.target.value)}
-                    placeholder="Jane & John Doe"
-                  />
-                </Field>
-                <Field label="Preferred Settlement Date">
-                  <Input type="date" value={settlementDate} onChange={(e) => setSettlementDate(e.target.value)} />
-                </Field>
-                <Field label="Available Total Cash For Strategy ($)">
-                  <Input
-                    inputMode="numeric"
-                    value={totalCash}
-                    onChange={(e) => setTotalCash(e.target.value.replace(/[^0-9]/g, ""))}
-                    placeholder="e.g., 160000"
-                  />
-                </Field>
-              </div>
-              <Field label="Notes" className="mt-3">
-                <Textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Renovation budget, timeline constraints, etc."
-                />
-              </Field>
-            </Section>
-
-            {/* Step 2: Financing */}
-            <Section title="Step 2: Financing Method" icon={<BarChart3 className="h-4 w-4 text-neutral-400" />}>
-              <p className="text-sm text-neutral-400">Sellers tend to see cash as lowest risk; higher down payments strengthen financed offers.</p>
-              <div className="grid gap-3 mt-3">
-                {FINANCING_OPTIONS.map((opt) => (
-                  <label
-                    key={opt.id}
-                    className="mc-pill flex cursor-pointer items-center justify-between rounded-xl p-3 transition"
-                    data-active={financing === opt.id}
-                  >
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="radio"
-                        name="financing"
-                        className="h-4 w-4"
-                        checked={financing === opt.id}
-                        onChange={() => setFinancing(opt.id)}
-                      />
-                      <span className="text-sm">{opt.label}</span>
+                    <p className="mt-1 text-sm text-neutral-400">
+                      Is there a competition or are you the only offer? Choose one.
+                    </p>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                      {COMPETITION_OPTIONS.map((opt) => (
+                        <OptionTile
+                          key={opt.id}
+                          active={competition === opt.id}
+                          label={opt.label}
+                          weight={opt.weight}
+                          onSelect={() => setCompetition(opt.id)}
+                        />
+                      ))}
                     </div>
-                    <span className="text-xs text-neutral-400">
-                      {opt.weight >= 0 ? `+${opt.weight}` : opt.weight}
-                    </span>
-                  </label>
-                ))}
-              </div>
-              <div className="pt-3">
-                <Label className="text-neutral-300">Down Payment (%)</Label>
-                <div className="mt-2 flex items-center gap-4">
-                  <Slider value={[downPct]} min={0} max={100} step={1} onValueChange={(v) => setDownPct(v[0])} className="w-full" />
-                  <div className="w-16 text-right text-sm">{downPct}%</div>
-                </div>
-              </div>
-            </Section>
+                  </CardContent>
+                </Card>
 
-            {/* Step 3: Home Sale Contingency */}
-            <Section title="Step 3: Home Sale Contingency">
-              <div className="grid gap-3 sm:grid-cols-2">
-                {SALE_CONTINGENCY.map((opt) => (
-                  <label
-                    key={opt.id}
-                    className="mc-pill flex cursor-pointer items-center justify-between rounded-xl p-3 transition"
-                    data-active={saleCont === opt.id}
-                  >
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="radio"
-                        name="saleCont"
-                        className="h-4 w-4"
-                        checked={saleCont === opt.id}
-                        onChange={() => setSaleCont(opt.id)}
-                      />
-                      <span className="text-sm">{opt.label}</span>
+                <Card className="mc-card">
+                  <CardContent className="p-5 md:p-6 space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-neutral-400" />
+                      <h2 className="text-lg font-medium">Step 1: Basic Information</h2>
                     </div>
-                    <span className="text-xs text-neutral-400">
-                      {opt.weight >= 0 ? `+${opt.weight}` : opt.weight}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </Section>
-
-            {/* Step 4: EMD */}
-            <Section title="Step 4: Earnest Money Deposit (EMD)">
-              <p className="text-sm text-neutral-400">Signals seriousness. Held by title/brokerage and credited at closing.</p>
-              <div className="mt-3 flex items-center gap-4">
-                <Slider value={[emdPct]} min={0} max={20} step={1} onValueChange={(v) => setEmdPct(v[0])} className="w-full" />
-                <div className="w-20 text-right text-sm">{emdPct}%</div>
-              </div>
-              <div className="mt-2 flex gap-2 text-xs text-neutral-400">
-                <span className="rounded bg-white/5 px-2 py-1">2% — Standard</span>
-                <span className="rounded bg-white/5 px-2 py-1">5% — Strong</span>
-                <span className="rounded bg-white/5 px-2 py-1">10%+ — Very Strong</span>
-              </div>
-            </Section>
-
-            {/* Step 5: Inspection */}
-            <Section title="Step 5: Home Inspection Contingency">
-              <div className="grid gap-3">
-                {INSPECTION_OPTIONS.map((opt) => (
-                  <label
-                    key={opt.id}
-                    className="mc-pill flex cursor-pointer items-center justify-between rounded-xl p-3 transition"
-                    data-active={inspection === opt.id}
-                  >
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="radio"
-                        name="inspection"
-                        className="h-4 w-4"
-                        checked={inspection === opt.id}
-                        onChange={() => setInspection(opt.id)}
-                      />
-                      <span className="text-sm">{opt.label}</span>
+                    <p className="text-sm text-neutral-400">
+                      Aligning with the seller’s preferred settlement date strengthens your offer. Understanding your cash flow is critical.
+                    </p>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <Label className="text-neutral-200">Property Address</Label>
+                        <Input
+                          value={propertyAddress}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPropertyAddress(e.target.value)}
+                          placeholder="123 Main St, City, ST"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-neutral-200">Buyers Names</Label>
+                        <Input
+                          value={buyerNames}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setBuyerNames(e.target.value)}
+                          placeholder="Jane & John Doe"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-neutral-200">Preferred Settlement Date</Label>
+                        <Input
+                          type="date"
+                          value={settlementDate}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSettlementDate(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-neutral-200">Available Total Cash For Strategy ($)</Label>
+                        <Input
+                          inputMode="numeric"
+                          value={totalCash}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTotalCash(e.target.value.replace(/[^0-9]/g, ""))}
+                          placeholder="e.g., 160000"
+                        />
+                      </div>
                     </div>
-                    <span className="text-xs text-neutral-400">
-                      {opt.weight >= 0 ? `+${opt.weight}` : opt.weight}
-                    </span>
-                  </label>
-                ))}
-              </div>
-              {inspection === "aLaCarte" && (
-                <div className="mt-3">
-                  <Label className="text-neutral-300">Pick specific tests (optional)</Label>
-                  <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-4">
-                    {[
-                      "Structural & Mechanical",
-                      "Mold",
-                      "Environmental",
-                      "Radon",
-                      "Chimney",
-                      "Lead-Based Paint",
-                      "Wood Destroying Insect",
-                    ].map((k) => {
-                      const id = k.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-                      const checked = inspectionChecks.includes(id);
-                      return (
-                        <label key={id} className="flex items-center gap-2 text-sm">
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={(e) =>
-                              setInspectionChecks((prev) =>
-                                e.target.checked ? [...prev, id] : prev.filter((x) => x !== id)
-                              )
-                            }
+                    <div>
+                      <Label className="text-neutral-200">Notes</Label>
+                      <Textarea
+                        value={notes}
+                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNotes(e.target.value)}
+                        placeholder="Renovation budget, timeline constraints, etc."
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            )}
+
+            {/* STEP 1: Financing, EMD, Inspection, Appraisal, Financing Cont */}
+            {step === 1 && (
+              <>
+                <Card className="mc-card">
+                  <CardContent className="p-5 md:p-6 space-y-4">
+                    <div className="flex items-center gap-2">
+                      <BarChart3 className="h-4 w-4 text-neutral-400" />
+                      <h2 className="text-lg font-medium">Step 2: Financing Method</h2>
+                    </div>
+                    <p className="text-sm text-neutral-400">Sellers tend to see cash as lowest risk; higher down payments also strengthen financed offers.</p>
+                    <div className="grid gap-3">
+                      {FINANCING_OPTIONS.map((opt) => (
+                        <OptionTile
+                          key={opt.id}
+                          active={financing === opt.id}
+                          label={opt.label}
+                          weight={opt.weight}
+                          onSelect={() => setFinancing(opt.id)}
+                        />
+                      ))}
+                    </div>
+                    <div className="pt-2">
+                      <Label className="text-neutral-200">Down Payment (%)</Label>
+                      <div className="mt-2 flex items-center gap-4">
+                        <Slider value={[downPct]} min={0} max={100} step={1} onValueChange={(v) => setDownPct(v[0])} className="w-full" />
+                        <div className="w-16 text-right text-sm">{downPct}%</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="mc-card">
+                  <CardContent className="p-5 md:p-6 space-y-4">
+                    <h2 className="text-lg font-medium">Home Sale Contingency</h2>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {SALE_CONTINGENCY.map((opt) => (
+                        <OptionTile
+                          key={opt.id}
+                          active={saleCont === opt.id}
+                          label={opt.label}
+                          weight={opt.weight}
+                          onSelect={() => setSaleCont(opt.id)}
+                        />
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="mc-card">
+                  <CardContent className="p-5 md:p-6 space-y-4">
+                    <h2 className="text-lg font-medium">Earnest Money Deposit (EMD)</h2>
+                    <p className="text-sm text-neutral-400">Signals seriousness. Held by title/brokerage and credited at closing.</p>
+                    <div className="flex items-center gap-4">
+                      <Slider value={[emdPct]} min={0} max={20} step={1} onValueChange={(v) => setEmdPct(v[0])} className="w-full" />
+                      <div className="w-20 text-right text-sm">{emdPct}%</div>
+                    </div>
+                    <div className="flex gap-2 text-xs text-neutral-400">
+                      <span className="rounded bg-white/5 px-2 py-1">2% — Standard</span>
+                      <span className="rounded bg-white/5 px-2 py-1">5% — Strong</span>
+                      <span className="rounded bg-white/5 px-2 py-1">10%+ — Very Strong</span>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="mc-card">
+                  <CardContent className="p-5 md:p-6 space-y-4">
+                    <h2 className="text-lg font-medium">Home Inspection Contingency</h2>
+                    <div className="grid gap-3">
+                      {INSPECTION_OPTIONS.map((opt) => (
+                        <OptionTile
+                          key={opt.id}
+                          active={inspection === opt.id}
+                          label={opt.label}
+                          weight={opt.weight}
+                          onSelect={() => setInspection(opt.id)}
+                        />
+                      ))}
+                    </div>
+                    {inspection === "aLaCarte" && (
+                      <div className="mt-2">
+                        <Label className="text-neutral-200">Pick specific tests (optional)</Label>
+                        <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-4">
+                          {["Structural & Mechanical","Mold","Environmental","Radon","Chimney","Lead-Based Paint","Wood Destroying Insect"].map((k) => {
+                            const id = k.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+                            const checked = inspectionChecks.includes(id);
+                            return (
+                              <label key={id} className="flex items-center gap-2 text-sm">
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                                    setInspectionChecks((prev) =>
+                                      e.target.checked ? [...prev, id] : prev.filter((x) => x !== id)
+                                    );
+                                  }}
+                                />
+                                <span>{k}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card className="mc-card">
+                  <CardContent className="p-5 md:p-6 space-y-4">
+                    <h2 className="text-lg font-medium">Appraisal & Financing Contingency</h2>
+                    <div className="grid gap-3">
+                      {APPRAISAL_OPTIONS.map((opt) => (
+                        <OptionTile
+                          key={opt.id}
+                          active={appraisal === opt.id}
+                          label={opt.label}
+                          weight={opt.weight}
+                          onSelect={() => setAppraisal(opt.id)}
+                        />
+                      ))}
+                    </div>
+                    {appraisal === "gapCover" && (
+                      <div className="mt-2">
+                        <Label className="text-neutral-200">Guarantee to cover appraisal gap up to ($)</Label>
+                        <Input
+                          inputMode="numeric"
+                          value={gapAmount || ""}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                            setGapAmount(Number(e.target.value.replace(/[^0-9]/g, "")) || 0)
+                          }
+                          placeholder="e.g., 10000"
+                        />
+                        <p className="mt-1 text-xs text-neutral-400">+1 score per $5,000 guaranteed (max +10)</p>
+                      </div>
+                    )}
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {FINANCING_CONT.map((opt) => (
+                        <OptionTile
+                          key={opt.id}
+                          active={finCont === opt.id}
+                          label={opt.label}
+                          weight={opt.weight}
+                          onSelect={() => setFinCont(opt.id)}
+                        />
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            )}
+
+            {/* STEP 2: Taxes/Title/Commission/Price/Rentback */}
+            {step === 2 && (
+              <>
+                <Card className="mc-card">
+                  <CardContent className="p-5 md:p-6 space-y-4">
+                    <h2 className="text-lg font-medium">Recordation / Transfer Tax / Title Company</h2>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div className="space-y-3">
+                        {TAX_TITLE_SPLIT.map((opt) => (
+                          <OptionTile
+                            key={opt.id}
+                            active={taxSplit === opt.id}
+                            label={opt.label}
+                            weight={opt.weight}
+                            onSelect={() => setTaxSplit(opt.id)}
                           />
-                          <span>{k}</span>
-                        </label>
-                      );
-                    })}
+                        ))}
+                      </div>
+                      <div className="space-y-3">
+                        {TITLE_PREF.map((opt) => (
+                          <OptionTile
+                            key={opt.id}
+                            active={titlePref === opt.id}
+                            label={opt.label}
+                            weight={opt.weight}
+                            onSelect={() => setTitlePref(opt.id)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="mc-card">
+                  <CardContent className="p-5 md:p-6 space-y-4">
+                    <h2 className="text-lg font-medium">Commission</h2>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {COMMISSION.map((opt) => (
+                        <OptionTile
+                          key={opt.id}
+                          active={commission === opt.id}
+                          label={opt.label}
+                          weight={opt.weight}
+                          onSelect={() => setCommission(opt.id)}
+                        />
+                      ))}
+                    </div>
+                    <p className="text-xs text-neutral-400">Note: Commission structures are evolving; your agent will confirm what the seller offers on this listing.</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="mc-card">
+                  <CardContent className="p-5 md:p-6 space-y-4">
+                    <h2 className="text-lg font-medium">Offer Price & Escalation</h2>
+                    <p className="text-sm text-neutral-400">List price is a starting point; competitiveness may warrant an escalation.</p>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <Label className="text-neutral-200">Seller Asking (List Price)</Label>
+                        <Input
+                          inputMode="numeric"
+                          value={listPrice}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setListPrice(e.target.value.replace(/[^0-9]/g, ""))}
+                          placeholder="e.g., 875000"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-neutral-200">Your Offer Price</Label>
+                        <Input
+                          inputMode="numeric"
+                          value={offerPrice}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOfferPrice(e.target.value.replace(/[^0-9]/g, ""))}
+                          placeholder="e.g., 895000"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-neutral-200">Escalation Up To</Label>
+                        <Input
+                          inputMode="numeric"
+                          value={escalationCap}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEscalationCap(e.target.value.replace(/[^0-9]/g, ""))}
+                          placeholder="e.g., 920000"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-neutral-200">Escalation By (increment)</Label>
+                        <Input
+                          inputMode="numeric"
+                          value={escalationBy}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEscalationBy(e.target.value.replace(/[^0-9]/g, ""))}
+                          placeholder="e.g., 5000"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-neutral-200">Rent-back</Label>
+                      <div className="mt-2 grid gap-3 md:grid-cols-3">
+                        {RENTBACK.map((opt) => (
+                          <OptionTile
+                            key={opt.id}
+                            active={rentback === opt.id}
+                            label={opt.label}
+                            weight={opt.weight}
+                            onSelect={() => setRentback(opt.id)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            )}
+
+            {/* STEP 3: Review Only (left side could stay empty or show read-only summary) */}
+            {step === 3 && (
+              <Card className="mc-card">
+                <CardContent className="p-5 md:p-6">
+                  <h2 className="text-lg font-medium">Review Inputs (Read-only)</h2>
+                  <p className="text-sm text-neutral-400">Confirm details before generating the final plan.</p>
+                  <div className="mt-4 grid gap-3 text-sm md:grid-cols-2">
+                    <SummaryRow label="Competition" value={COMPETITION_OPTIONS.find(o=>o.id===competition)?.label || ""} />
+                    <SummaryRow label="Financing" value={`${FINANCING_OPTIONS.find(o=>o.id===financing)?.label?.split(" — ")[0]} • ${downPct}% down`} />
+                    <SummaryRow label="Home Sale Cont." value={SALE_CONTINGENCY.find(o=>o.id===saleCont)?.label || ""} />
+                    <SummaryRow label="EMD" value={`${emdPct}% of offer`} />
+                    <SummaryRow label="Inspection" value={INSPECTION_OPTIONS.find(o=>o.id===inspection)?.label || ""} />
+                    <SummaryRow label="Appraisal" value={APPRAISAL_OPTIONS.find(o=>o.id===appraisal)?.label || ""} />
+                    {appraisal === "gapCover" && <SummaryRow label="Gap cover" value={`Up to $${gapAmount.toLocaleString()}`} />}
+                    <SummaryRow label="Financing Cont." value={FINANCING_CONT.find(o=>o.id===finCont)?.label || ""} />
+                    <SummaryRow label="Taxes/Title" value={`${TAX_TITLE_SPLIT.find(o=>o.id===taxSplit)?.label} • ${TITLE_PREF.find(o=>o.id===titlePref)?.label}`} />
+                    <SummaryRow label="Commission" value={COMMISSION.find(o=>o.id===commission)?.label || ""} />
+                    <SummaryRow label="Price" value={`List $${Number(listPrice||0).toLocaleString()} → Offer $${Number(offerPrice||0).toLocaleString()}`} />
+                    {(escalationCap||escalationBy) && (
+                      <SummaryRow label="Escalation" value={`Up to $${Number(escalationCap||0).toLocaleString()} by $${Number(escalationBy||0).toLocaleString()}`} />
+                    )}
+                    <SummaryRow label="Rent-back" value={RENTBACK.find(o=>o.id===rentback)?.label || ""} />
                   </div>
-                </div>
-              )}
-            </Section>
-
-            {/* Step 6: Appraisal */}
-            <Section title="Step 6: Appraisal Contingency">
-              <div className="grid gap-3">
-                {APPRAISAL_OPTIONS.map((opt) => (
-                  <label
-                    key={opt.id}
-                    className="mc-pill flex cursor-pointer items-center justify-between rounded-xl p-3 transition"
-                    data-active={appraisal === opt.id}
-                  >
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="radio"
-                        name="appraisal"
-                        className="h-4 w-4"
-                        checked={appraisal === opt.id}
-                        onChange={() => setAppraisal(opt.id)}
-                      />
-                      <span className="text-sm">{opt.label}</span>
-                    </div>
-                    <span className="text-xs text-neutral-400">
-                      {opt.weight >= 0 ? `+${opt.weight}` : opt.weight}
-                    </span>
-                  </label>
-                ))}
-              </div>
-              {appraisal === "gapCover" && (
-                <div className="mt-3">
-                  <Label className="text-neutral-300">Guarantee to cover appraisal gap up to ($)</Label>
-                  <Input
-                    inputMode="numeric"
-                    value={gapAmount || ""}
-                    onChange={(e) => setGapAmount(Number(e.target.value.replace(/[^0-9]/g, "")) || 0)}
-                    placeholder="e.g., 10000"
-                    className="mt-2"
-                  />
-                  <p className="mt-1 text-xs text-neutral-400">+1 score per $5,000 guaranteed (max +10)</p>
-                </div>
-              )}
-            </Section>
-
-            {/* Step 7: Financing Contingency */}
-            <Section title="Step 7: Financing Contingency">
-              <div className="grid gap-3 sm:grid-cols-2">
-                {FINANCING_CONT.map((opt) => (
-                  <label
-                    key={opt.id}
-                    className="mc-pill flex cursor-pointer items-center justify-between rounded-xl p-3 transition"
-                    data-active={finCont === opt.id}
-                  >
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="radio"
-                        name="finCont"
-                        className="h-4 w-4"
-                        checked={finCont === opt.id}
-                        onChange={() => setFinCont(opt.id)}
-                      />
-                      <span className="text-sm">{opt.label}</span>
-                    </div>
-                    <span className="text-xs text-neutral-400">
-                      {opt.weight >= 0 ? `+${opt.weight}` : opt.weight}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </Section>
-
-            {/* Step 8: Transfer/Recordation & Title */}
-            <Section title="Step 8: Recordation / Transfer Tax / Title Company">
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-3">
-                  {TAX_TITLE_SPLIT.map((opt) => (
-                    <label
-                      key={opt.id}
-                      className="mc-pill flex cursor-pointer items-center justify-between rounded-xl p-3 transition"
-                      data-active={taxSplit === opt.id}
-                    >
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="radio"
-                          name="taxSplit"
-                          className="h-4 w-4"
-                          checked={taxSplit === opt.id}
-                          onChange={() => setTaxSplit(opt.id)}
-                        />
-                        <span className="text-sm">{opt.label}</span>
-                      </div>
-                      <span className="text-xs text-neutral-400">
-                        {opt.weight >= 0 ? `+${opt.weight}` : opt.weight}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-                <div className="space-y-3">
-                  {TITLE_PREF.map((opt) => (
-                    <label
-                      key={opt.id}
-                      className="mc-pill flex cursor-pointer items-center justify-between rounded-xl p-3 transition"
-                      data-active={titlePref === opt.id}
-                    >
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="radio"
-                          name="titlePref"
-                          className="h-4 w-4"
-                          checked={titlePref === opt.id}
-                          onChange={() => setTitlePref(opt.id)}
-                        />
-                        <span className="text-sm">{opt.label}</span>
-                      </div>
-                      <span className="text-xs text-neutral-400">
-                        {opt.weight >= 0 ? `+${opt.weight}` : opt.weight}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </Section>
-
-            {/* Step 9: Commission */}
-            <Section title="Step 9: Commission">
-              <div className="grid gap-3 sm:grid-cols-2">
-                {COMMISSION.map((opt) => (
-                  <label
-                    key={opt.id}
-                    className="mc-pill flex cursor-pointer items-center justify-between rounded-xl p-3 transition"
-                    data-active={commission === opt.id}
-                  >
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="radio"
-                        name="commission"
-                        className="h-4 w-4"
-                        checked={commission === opt.id}
-                        onChange={() => setCommission(opt.id)}
-                      />
-                      <span className="text-sm">{opt.label}</span>
-                    </div>
-                    <span className="text-xs text-neutral-400">
-                      {opt.weight >= 0 ? `+${opt.weight}` : opt.weight}
-                    </span>
-                  </label>
-                ))}
-              </div>
-              <p className="mt-2 text-xs text-neutral-400">
-                Note: Commission structures are evolving; your agent will confirm what the seller offers on this listing.
-              </p>
-            </Section>
-
-            {/* Step 10: Offer Price & Escalation */}
-            <Section title="Step 10: Offer Price">
-              <p className="text-sm text-neutral-400">List price is a starting point; competitiveness may warrant an escalation.</p>
-              <div className="grid gap-4 md:grid-cols-2 mt-3">
-                <Field label="Seller Asking (List Price)">
-                  <Input
-                    inputMode="numeric"
-                    value={listPrice}
-                    onChange={(e) => setListPrice(e.target.value.replace(/[^0-9]/g, ""))}
-                    placeholder="e.g., 875000"
-                  />
-                </Field>
-                <Field label="Your Offer Price">
-                  <Input
-                    inputMode="numeric"
-                    value={offerPrice}
-                    onChange={(e) => setOfferPrice(e.target.value.replace(/[^0-9]/g, ""))}
-                    placeholder="e.g., 895000"
-                  />
-                </Field>
-                <Field label="Escalation Up To">
-                  <Input
-                    inputMode="numeric"
-                    value={escalationCap}
-                    onChange={(e) => setEscalationCap(e.target.value.replace(/[^0-9]/g, ""))}
-                    placeholder="e.g., 920000"
-                  />
-                </Field>
-                <Field label="Escalation By (increment)">
-                  <Input
-                    inputMode="numeric"
-                    value={escalationBy}
-                    onChange={(e) => setEscalationBy(e.target.value.replace(/[^0-9]/g, ""))}
-                    placeholder="e.g., 5000"
-                  />
-                </Field>
-              </div>
-
-              <div className="mt-3">
-                <Label className="text-neutral-300">Rent-back</Label>
-                <div className="mt-2 grid gap-3 md:grid-cols-3">
-                  {RENTBACK.map((opt) => (
-                    <label
-                      key={opt.id}
-                      className="mc-pill flex cursor-pointer items-center justify-between rounded-xl p-3 transition"
-                      data-active={rentback === opt.id}
-                    >
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="radio"
-                          name="rentback"
-                          className="h-4 w-4"
-                          checked={rentback === opt.id}
-                          onChange={() => setRentback(opt.id)}
-                        />
-                        <span className="text-sm">{opt.label}</span>
-                      </div>
-                      <span className="text-xs text-neutral-400">
-                        {opt.weight >= 0 ? `+${opt.weight}` : opt.weight}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </Section>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
-          {/* RIGHT: Summary */}
-          <aside className="lg:col-span-1">
-            <div className="mc-card sticky top-6 p-5">
-              <div className="flex items-center justify-between">
-                <h3 className="text-base font-medium">Offer Strength</h3>
-                <Sparkles className="h-4 w-4 text-neutral-400" />
-              </div>
-
-              <div className="mt-4">
-                <div className="mc-bar">
-                  <motion.div
-                    className="mc-bar-fill"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${score}%` }}
-                    transition={{ type: "spring", stiffness: 80, damping: 20 }}
-                  />
-                </div>
-                <div className="mt-3 flex items-center justify-between">
-                  <div className="text-3xl font-semibold tracking-tight">{score}</div>
-                  <div className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-sm text-neutral-200">
-                    <span className="mr-1">{badge.emoji}</span>
-                    {badge.label}
+          {/* Right column (summary / final) */}
+          <div className="lg:col-span-1">
+            {step < 3 ? (
+              <Card className="sticky top-6 mc-card">
+                <CardContent className="p-5 md:p-6">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-base font-medium">Offer Strength</h3>
+                    <Sparkles className="h-4 w-4 text-neutral-400" />
                   </div>
-                </div>
-              </div>
+                  <div className="mt-4">
+                    <div className="mc-bar">
+                      <motion.div
+                        className="mc-bar-fill"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${score}%` }}
+                        transition={{ type: "spring", stiffness: 80, damping: 20 }}
+                      />
+                    </div>
+                    <div className="mt-2 flex items-center justify-between">
+                      <div className="text-2xl font-semibold">{score}</div>
+                      <div className="rounded-full border border-white/15 bg-white/8 px-3 py-1 text-sm text-neutral-200">
+                        <span className="mr-1">{badge.emoji}</span>
+                        {badge.label}
+                      </div>
+                    </div>
+                  </div>
 
-              {/* Summary rows */}
-              <div className="mt-5 space-y-3 text-sm">
-                <SummaryRow label="Competition" value={COMPETITION_OPTIONS.find(o=>o.id===competition)?.label || ""} />
-                <SummaryRow label="Financing" value={`${FINANCING_OPTIONS.find(o=>o.id===financing)?.label?.split(" — ")[0]} • ${downPct}% down`} />
-                <SummaryRow label="Home Sale Cont." value={SALE_CONTINGENCY.find(o=>o.id===saleCont)?.label || ""} />
-                <SummaryRow label="EMD" value={`${emdPct}% of offer`} />
-                <SummaryRow label="Inspection" value={INSPECTION_OPTIONS.find(o=>o.id===inspection)?.label || ""} />
-                <SummaryRow label="Appraisal" value={APPRAISAL_OPTIONS.find(o=>o.id===appraisal)?.label || ""} />
-                {appraisal === "gapCover" && <SummaryRow label="Gap cover" value={`Up to $${gapAmount.toLocaleString()}`} />}
-                <SummaryRow label="Financing Cont." value={FINANCING_CONT.find(o=>o.id===finCont)?.label || ""} />
-                <SummaryRow label="Taxes/Title" value={`${TAX_TITLE_SPLIT.find(o=>o.id===taxSplit)?.label} • ${TITLE_PREF.find(o=>o.id===titlePref)?.label}`} />
-                <SummaryRow label="Commission" value={COMMISSION.find(o=>o.id===commission)?.label || ""} />
-                <SummaryRow label="Price" value={`List $${Number(listPrice||0).toLocaleString()} → Offer $${Number(offerPrice||0).toLocaleString()}`} />
-                {(escalationCap||escalationBy) && (
-                  <SummaryRow label="Escalation" value={`Up to $${Number(escalationCap||0).toLocaleString()} by $${Number(escalationBy||0).toLocaleString()}`} />
-                )}
-                <SummaryRow label="Rent-back" value={RENTBACK.find(o=>o.id===rentback)?.label || ""} />
-              </div>
+                  <div className="mt-5 space-y-3 text-sm">
+                    <SummaryRow label="Competition" value={COMPETITION_OPTIONS.find(o=>o.id===competition)?.label || ""} />
+                    <SummaryRow label="Financing" value={`${FINANCING_OPTIONS.find(o=>o.id===financing)?.label?.split(" — ")[0]} • ${downPct}% down`} />
+                    <SummaryRow label="Appraisal" value={APPRAISAL_OPTIONS.find(o=>o.id===appraisal)?.label || ""} />
+                    <SummaryRow label="Price" value={`List $${Number(listPrice||0).toLocaleString()} → Offer $${Number(offerPrice||0).toLocaleString()}`} />
+                  </div>
 
-              <div className="mt-6 rounded-lg border border-white/10 bg-white/5 p-3 text-xs text-neutral-300">
-                <p className="mb-1 font-medium text-neutral-200">Heads up</p>
-                <p>
-                  This simulator is educational; listing agent feedback and local norms can shift strategy. We’ll finalize terms together before drafting.
-                </p>
+                  <div className="mt-6 rounded-lg border border-white/10 bg-black/20 p-3 text-xs text-neutral-400">
+                    <p className="mb-1 font-medium text-neutral-300">Heads up</p>
+                    <p>
+                      This simulator is educational; listing agent feedback and local norms can shift strategy. We’ll finalize terms together before drafting.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="sticky top-6">
+                <FinalPanel score={score} badge={badge} state={{
+                  competition, financing, downPct, emdPct, inspection, appraisal, finCont,
+                  taxSplit, titlePref, commission, listPrice, offerPrice, rentback
+                }} />
               </div>
-            </div>
-          </aside>
+            )}
+          </div>
         </div>
 
         {/* Footer */}
-        <p className="mt-10 text-center text-xs text-neutral-500">
+        <p className="mt-8 text-center text-xs text-neutral-500">
           © {new Date().getFullYear()} Maison Collective • Built for client education
         </p>
       </div>
-    </div>
-  );
-}
 
-/* -------------------- 작은 헬퍼 컴포넌트 -------------------- */
-function Section({
-  title,
-  icon,
-  children,
-}: {
-  title: string;
-  icon?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="mc-card p-5">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-medium">{title}</h2>
-        {icon}
-      </div>
-      <div className="mt-2">{children}</div>
-    </div>
-  );
-}
+      {/* Bottom step navigation */}
+      <StepNav
+        step={step}
+        total={totalSteps}
+        canPrev={step > 0}
+        canNext={step < totalSteps - 1 && canGoNext}
+        onPrev={() => setStep((s) => Math.max(0, s - 1))}
+        onNext={() => setStep((s) => Math.min(totalSteps - 1, s + 1))}
+        onFinish={() => setShowFinal(true)}
+      />
 
-function Field({
-  label,
-  children,
-  className = "",
-}: {
-  label: string;
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <div className={className}>
-      <Label className="text-neutral-300">{label}</Label>
-      <div className="mt-1.5">{children}</div>
+      {/* Generate plan -> 자동으로 오른쪽 FinalPanel이 보이도록 step 3 유지 + alert 안내(선택) */}
+      {showFinal && step === totalSteps - 1 && null}
     </div>
   );
 }

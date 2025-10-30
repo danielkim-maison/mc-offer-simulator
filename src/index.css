@@ -146,3 +146,5 @@ textarea::placeholder { color: rgb(var(--mc-muted)); }
   box-shadow: 0 0 0 3px rgba(255,255,255,.10);
   border-color: rgba(var(--mc-border), .18);
 }
+.bg-white\/8 { background-color: rgba(255,255,255,.08); }
+.border-white\/15 { border-color: rgba(255,255,255,.15); }
