@@ -723,10 +723,7 @@ export default function App() {
                   ))}
                 </div>
 
-                {/* 오른쪽: Rent-back 라벨만 배치 */}
-                <div style={{ textAlign: "right", alignSelf: "start" }}>
-                  <Label className="text-neutral-200" style={{ margin: 0 }}>Rent-back</Label>
-                </div>
+                
               </div>
             </CardContent>
           </Card>
