@@ -1,12 +1,6 @@
 ﻿import React, { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import {
-  Info,
-  RefreshCcw,
-  Download,
-  Sparkles,
-  CheckCircle2,
-} from "lucide-react";
+import { Info, RefreshCcw, Download, Sparkles, CheckCircle2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -101,7 +95,7 @@ function getRecommendations(state: {
   const lp = Number(state.listPrice) || 0;
   const op = Number(state.offerPrice) || 0;
 
-  if (state.competition !== "solo" && (op <= lp)) {
+  if (state.competition !== "solo" && op <= lp) {
     rec.push("In competitive situations, consider offering 0.5–1.0% above list or enabling escalation.");
   }
   if (state.emdPct < 5) rec.push("Increase EMD to at least 5% to improve perceived commitment.");
@@ -138,17 +132,20 @@ function OptionTile({
   onSelect: () => void;
 }) {
   const outerStyle: React.CSSProperties = {
-    display: "flex",
+    display: "inline-flex",
     alignItems: "center",
     justifyContent: "space-between",
     borderRadius: 16,
-    padding: "14px 16px",
+    padding: "12px 14px",
     cursor: "pointer",
     outline: "none",
     transition: "background .15s ease, border-color .15s ease, box-shadow .15s ease",
+    border: "1px solid rgba(255,255,255,.10)",
+    background: active ? "rgba(255,255,255,.14)" : "rgba(255,255,255,.04)",
+    marginRight: 8,
   };
-  const activeStyle: React.CSSProperties = active
-    ? { background: "rgba(255,255,255,.14)", borderColor: "rgba(255,255,255,.55)", boxShadow: "0 0 0 3px rgba(255,255,255,.06)" }
+  const activeRing: React.CSSProperties = active
+    ? { borderColor: "rgba(255,255,255,.55)", boxShadow: "0 0 0 3px rgba(255,255,255,.06)" }
     : {};
 
   return (
@@ -159,9 +156,9 @@ function OptionTile({
       onClick={onSelect}
       onKeyDown={(e) => ((e.key === "Enter" || e.key === " ") && onSelect())}
       className="mc-pill"
-      style={{ ...outerStyle, ...activeStyle, border: "1px solid rgba(255,255,255,.10)", background: active ? "rgba(255,255,255,.14)" : "rgba(255,255,255,.04)" }}
+      style={{ ...outerStyle, ...activeRing }}
     >
-      <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
+      <div style={{ display: "flex", alignItems: "center" }}>
         <span
           aria-hidden
           style={{
@@ -179,7 +176,7 @@ function OptionTile({
         >
           {active ? <CheckCircle2 size={16} color="#111" /> : null}
         </span>
-        <div style={{ width: 24, flex: "0 0 24px" }} />
+        <div style={{ width: 12 }} />
         <span style={{ lineHeight: 1.4, fontSize: 15 }}>{label}</span>
       </div>
     </div>
@@ -190,9 +187,11 @@ function OptionTile({
 function FormRow({
   label,
   children,
+  rightLabel = true,
 }: {
   label: string;
   children: React.ReactNode;
+  rightLabel?: boolean;
 }) {
   return (
     <div
@@ -205,7 +204,12 @@ function FormRow({
         width: "100%",
       }}
     >
-      <Label className="text-neutral-200" style={{ margin: 0 }}>{label}</Label>
+      <Label
+        className="text-neutral-200"
+        style={{ margin: 0, textAlign: rightLabel ? "right" as const : "left" as const }}
+      >
+        {label}
+      </Label>
       <div>{children}</div>
     </div>
   );
@@ -375,7 +379,7 @@ export default function App() {
           <p className="mt-1 text-sm text-neutral-400">
             Make your selections below. Your final Offer Strength appears at the end.
           </p>
-          <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 16 }}>
+          <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 16, flexWrap: "wrap" }}>
             <Button variant="secondary" className="mc-btn-secondary" onClick={resetAll}>
               <RefreshCcw className="mr-2 h-4 w-4" /> Reset
             </Button>
@@ -386,7 +390,7 @@ export default function App() {
         </div>
 
         <div style={{ marginTop: 24, display: "grid", gap: 16 }}>
-          {/* 1. Competition (left-aligned) */}
+          {/* 1. Competition */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6">
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -396,7 +400,7 @@ export default function App() {
               <p className="mt-1 text-sm text-neutral-400">
                 Is there a competition or are you the only offer? Choose one.
               </p>
-              <div style={{ display: "grid", gap: 12, gridTemplateColumns: "1fr", marginTop: 14 }}>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
                 {COMPETITION_OPTIONS.map((opt) => (
                   <OptionTile
                     key={opt.id}
@@ -409,7 +413,7 @@ export default function App() {
             </CardContent>
           </Card>
 
-          {/* 2. Basic Information (left-aligned, no icon) */}
+          {/* 2. Basic Information */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6">
               <h2 className="text-lg font-medium">2. Basic Information</h2>
@@ -458,12 +462,12 @@ export default function App() {
             </CardContent>
           </Card>
 
-          {/* 3. Financing Method (left-aligned, no icon) */}
+          {/* 3. Financing Method */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6">
               <h2 className="text-lg font-medium">3. Financing Method</h2>
 
-              <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
                 {FINANCING_OPTIONS.map((opt) => (
                   <OptionTile
                     key={opt.id}
@@ -484,11 +488,11 @@ export default function App() {
             </CardContent>
           </Card>
 
-          {/* 4. Home Sale Contingency (left) */}
+          {/* 4. Home Sale Contingency */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6">
               <h2 className="text-lg font-medium">4. Home Sale Contingency</h2>
-              <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
                 {SALE_CONTINGENCY.map((opt) => (
                   <OptionTile
                     key={opt.id}
@@ -501,7 +505,7 @@ export default function App() {
             </CardContent>
           </Card>
 
-          {/* 5. EMD (left) */}
+          {/* 5. EMD */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6">
               <h2 className="text-lg font-medium">5. Earnest Money Deposit (EMD)</h2>
@@ -512,7 +516,7 @@ export default function App() {
                 <Slider value={[emdPct]} min={0} max={20} step={1} onValueChange={(v) => setEmdPct(v[0])} className="w-full" />
                 <div style={{ width: 64, textAlign: "right", fontSize: 14 }}>{emdPct}%</div>
               </div>
-              <div style={{ display: "flex", gap: 8, fontSize: 12, opacity: .8, marginTop: 8 }}>
+              <div style={{ display: "flex", gap: 8, fontSize: 12, opacity: .8, marginTop: 8, flexWrap: "wrap" }}>
                 <span className="rounded" style={{ background: "rgba(255,255,255,.06)", padding: "4px 8px" }}>2% — Standard</span>
                 <span className="rounded" style={{ background: "rgba(255,255,255,.06)", padding: "4px 8px" }}>5% — Strong</span>
                 <span className="rounded" style={{ background: "rgba(255,255,255,.06)", padding: "4px 8px" }}>10%+ — Very Strong</span>
@@ -520,11 +524,11 @@ export default function App() {
             </CardContent>
           </Card>
 
-          {/* 6. Inspection (left) */}
+          {/* 6. Inspection */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6">
               <h2 className="text-lg font-medium">6. Home Inspection Contingency</h2>
-              <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
                 {INSPECTION_OPTIONS.map((opt) => (
                   <OptionTile
                     key={opt.id}
@@ -563,11 +567,11 @@ export default function App() {
             </CardContent>
           </Card>
 
-          {/* 7. Appraisal & Financing Contingency (left) */}
+          {/* 7. Appraisal & Financing Contingency */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6">
               <h2 className="text-lg font-medium">7. Appraisal & Financing Contingency</h2>
-              <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
                 {APPRAISAL_OPTIONS.map((opt) => (
                   <OptionTile
                     key={opt.id}
@@ -593,7 +597,7 @@ export default function App() {
                   </p>
                 </div>
               )}
-              <div style={{ display: "grid", gap: 12, marginTop: 12, gridTemplateColumns: "1fr" }}>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 12 }}>
                 {FINANCING_CONT.map((opt) => (
                   <OptionTile
                     key={opt.id}
@@ -606,11 +610,11 @@ export default function App() {
             </CardContent>
           </Card>
 
-          {/* 8. Recordation / Transfer Tax / Title (left) */}
+          {/* 8. Recordation / Transfer Tax / Title */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6">
               <h2 className="text-lg font-medium">8. Recordation / Transfer Tax / Title Company</h2>
-              <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
                 {TAX_TITLE_SPLIT.map((opt) => (
                   <OptionTile
                     key={opt.id}
@@ -631,11 +635,11 @@ export default function App() {
             </CardContent>
           </Card>
 
-          {/* 9. Commission (left) */}
+          {/* 9. Commission */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6">
               <h2 className="text-lg font-medium">9. Commission</h2>
-              <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
                 {COMMISSION.map((opt) => (
                   <OptionTile
                     key={opt.id}
@@ -651,7 +655,7 @@ export default function App() {
             </CardContent>
           </Card>
 
-          {/* 10. Offer Price & Escalation (left) */}
+          {/* 10. Offer Price & Escalation */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6">
               <h2 className="text-lg font-medium">10. Offer Price & Escalation</h2>
@@ -693,8 +697,9 @@ export default function App() {
                   />
                 </FormRow>
 
+                {/* Rent-back — same line layout; label right, options inline */}
                 <FormRow label="Rent-back">
-                  <div style={{ display: "grid", gap: 10 }}>
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                     {RENTBACK.map((opt) => (
                       <OptionTile
                         key={opt.id}
@@ -751,7 +756,7 @@ export default function App() {
                 </ul>
               </div>
 
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
                 <Button
                   onClick={() => {
                     const txt = `Offer Plan (Score ${score} – ${badge.label})
@@ -779,10 +784,12 @@ ${getRecommendations(recsState).map((x,i)=>`${i+1}. ${x}`).join("\n")}
             </CardContent>
           </Card>
 
-          {/* Footer (center) */}
-          <p className="text-center text-xs text-neutral-500" style={{ marginTop: 8 }}>
-            © {new Date().getFullYear()} Maison Collective • Built for client education
-          </p>
+          {/* Footer — force center */}
+          <div style={{ width: "100%", textAlign: "center" }}>
+            <p className="text-xs text-neutral-500" style={{ marginTop: 8 }}>
+              © {new Date().getFullYear()} Maison Collective • Built for client education
+            </p>
+          </div>
         </div>
       </div>
     </div>
