@@ -5,8 +5,6 @@ import {
   RefreshCcw,
   Download,
   Sparkles,
-  Calendar,
-  BarChart3,
   CheckCircle2,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -129,7 +127,7 @@ function getRecommendations(state: {
   return rec.slice(0, 5);
 }
 
-/* ------------- Reusable UI: Option Tile (more space & clearer active) ------------- */
+/* ------------- Reusable UI: Option Tile ------------- */
 function OptionTile({
   active,
   label,
@@ -139,7 +137,6 @@ function OptionTile({
   label: string;
   onSelect: () => void;
 }) {
-  // 더 여백을 주고, 체크 아이콘과 텍스트 사이 간격을 크게
   const outerStyle: React.CSSProperties = {
     display: "flex",
     alignItems: "center",
@@ -165,7 +162,6 @@ function OptionTile({
       style={{ ...outerStyle, ...activeStyle, border: "1px solid rgba(255,255,255,.10)", background: active ? "rgba(255,255,255,.14)" : "rgba(255,255,255,.04)" }}
     >
       <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
-        {/* 체크 아이콘 원형칸 */}
         <span
           aria-hidden
           style={{
@@ -183,18 +179,14 @@ function OptionTile({
         >
           {active ? <CheckCircle2 size={16} color="#111" /> : null}
         </span>
-
-        {/* 아이콘과 텍스트 사이 여백을 크게(24px) */}
         <div style={{ width: 24, flex: "0 0 24px" }} />
-
-        {/* 라벨 텍스트 */}
         <span style={{ lineHeight: 1.4, fontSize: 15 }}>{label}</span>
       </div>
     </div>
   );
 }
 
-/* --------- Reusable UI: Form Row (Label left, input right, tidy) --------- */
+/* --------- Reusable UI: Form Row --------- */
 function FormRow({
   label,
   children,
@@ -394,7 +386,7 @@ export default function App() {
         </div>
 
         <div style={{ marginTop: 24, display: "grid", gap: 16 }}>
-          {/* 1. Competition */}
+          {/* 1. Competition (left-aligned) */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6">
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -417,14 +409,10 @@ export default function App() {
             </CardContent>
           </Card>
 
-          {/* 2. Basic Information (tidy rows) */}
+          {/* 2. Basic Information (left-aligned, no icon) */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6">
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                <Calendar className="h-4 w-4 text-neutral-400" />
-                <h2 className="text-lg font-medium" style={{ textAlign: "center" }}>2. Basic Information</h2>
-              </div>
-
+              <h2 className="text-lg font-medium">2. Basic Information</h2>
               <div style={{ display: "grid", gap: 14, marginTop: 16 }}>
                 <FormRow label="Property Address">
                   <Input
@@ -470,13 +458,10 @@ export default function App() {
             </CardContent>
           </Card>
 
-          {/* 3. Financing Method */}
+          {/* 3. Financing Method (left-aligned, no icon) */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6">
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                <BarChart3 className="h-4 w-4 text-neutral-400" />
-                <h2 className="text-lg font-medium" style={{ textAlign: "center" }}>3. Financing Method</h2>
-              </div>
+              <h2 className="text-lg font-medium">3. Financing Method</h2>
 
               <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
                 {FINANCING_OPTIONS.map((opt) => (
@@ -499,10 +484,10 @@ export default function App() {
             </CardContent>
           </Card>
 
-          {/* 4. Home Sale Contingency */}
+          {/* 4. Home Sale Contingency (left) */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6">
-              <h2 className="text-lg font-medium" style={{ textAlign: "center" }}>4. Home Sale Contingency</h2>
+              <h2 className="text-lg font-medium">4. Home Sale Contingency</h2>
               <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
                 {SALE_CONTINGENCY.map((opt) => (
                   <OptionTile
@@ -516,18 +501,18 @@ export default function App() {
             </CardContent>
           </Card>
 
-          {/* 5. Earnest Money Deposit (EMD) */}
+          {/* 5. EMD (left) */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6">
-              <h2 className="text-lg font-medium" style={{ textAlign: "center" }}>5. Earnest Money Deposit (EMD)</h2>
-              <p className="text-sm text-neutral-400" style={{ textAlign: "center", marginTop: 6 }}>
+              <h2 className="text-lg font-medium">5. Earnest Money Deposit (EMD)</h2>
+              <p className="text-sm text-neutral-400" style={{ marginTop: 6 }}>
                 Signals seriousness. Held by title/brokerage and credited at closing.
               </p>
               <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 12 }}>
                 <Slider value={[emdPct]} min={0} max={20} step={1} onValueChange={(v) => setEmdPct(v[0])} className="w-full" />
                 <div style={{ width: 64, textAlign: "right", fontSize: 14 }}>{emdPct}%</div>
               </div>
-              <div style={{ display: "flex", justifyContent: "center", gap: 8, fontSize: 12, opacity: .8, marginTop: 8 }}>
+              <div style={{ display: "flex", gap: 8, fontSize: 12, opacity: .8, marginTop: 8 }}>
                 <span className="rounded" style={{ background: "rgba(255,255,255,.06)", padding: "4px 8px" }}>2% — Standard</span>
                 <span className="rounded" style={{ background: "rgba(255,255,255,.06)", padding: "4px 8px" }}>5% — Strong</span>
                 <span className="rounded" style={{ background: "rgba(255,255,255,.06)", padding: "4px 8px" }}>10%+ — Very Strong</span>
@@ -535,10 +520,10 @@ export default function App() {
             </CardContent>
           </Card>
 
-          {/* 6. Home Inspection Contingency */}
+          {/* 6. Inspection (left) */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6">
-              <h2 className="text-lg font-medium" style={{ textAlign: "center" }}>6. Home Inspection Contingency</h2>
+              <h2 className="text-lg font-medium">6. Home Inspection Contingency</h2>
               <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
                 {INSPECTION_OPTIONS.map((opt) => (
                   <OptionTile
@@ -578,10 +563,10 @@ export default function App() {
             </CardContent>
           </Card>
 
-          {/* 7. Appraisal & Financing Contingency */}
+          {/* 7. Appraisal & Financing Contingency (left) */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6">
-              <h2 className="text-lg font-medium" style={{ textAlign: "center" }}>7. Appraisal & Financing Contingency</h2>
+              <h2 className="text-lg font-medium">7. Appraisal & Financing Contingency</h2>
               <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
                 {APPRAISAL_OPTIONS.map((opt) => (
                   <OptionTile
@@ -603,7 +588,7 @@ export default function App() {
                     }
                     placeholder="e.g., 10000"
                   />
-                  <p className="mt-1 text-xs text-neutral-400" style={{ textAlign: "center", marginTop: 6 }}>
+                  <p className="mt-1 text-xs text-neutral-400" style={{ marginTop: 6 }}>
                     +1 score per $5,000 guaranteed (max +10)
                   </p>
                 </div>
@@ -621,10 +606,10 @@ export default function App() {
             </CardContent>
           </Card>
 
-          {/* 8. Recordation / Transfer Tax / Title Company */}
+          {/* 8. Recordation / Transfer Tax / Title (left) */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6">
-              <h2 className="text-lg font-medium" style={{ textAlign: "center" }}>8. Recordation / Transfer Tax / Title Company</h2>
+              <h2 className="text-lg font-medium">8. Recordation / Transfer Tax / Title Company</h2>
               <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
                 {TAX_TITLE_SPLIT.map((opt) => (
                   <OptionTile
@@ -646,10 +631,10 @@ export default function App() {
             </CardContent>
           </Card>
 
-          {/* 9. Commission */}
+          {/* 9. Commission (left) */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6">
-              <h2 className="text-lg font-medium" style={{ textAlign: "center" }}>9. Commission</h2>
+              <h2 className="text-lg font-medium">9. Commission</h2>
               <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
                 {COMMISSION.map((opt) => (
                   <OptionTile
@@ -660,16 +645,16 @@ export default function App() {
                   />
                 ))}
               </div>
-              <p className="text-xs text-neutral-400" style={{ textAlign: "center", marginTop: 10 }}>
+              <p className="text-xs text-neutral-400" style={{ marginTop: 10 }}>
                 Note: Commission structures are evolving; your agent will confirm what the seller offers on this listing.
               </p>
             </CardContent>
           </Card>
 
-          {/* 10. Offer Price & Escalation (tidy rows) */}
+          {/* 10. Offer Price & Escalation (left) */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6">
-              <h2 className="text-lg font-medium" style={{ textAlign: "center" }}>10. Offer Price & Escalation</h2>
+              <h2 className="text-lg font-medium">10. Offer Price & Escalation</h2>
 
               <div style={{ display: "grid", gap: 14, marginTop: 16 }}>
                 <FormRow label="Seller Asking (List Price)">
@@ -724,7 +709,7 @@ export default function App() {
             </CardContent>
           </Card>
 
-          {/* Final — Offer Strength (everything centered) */}
+          {/* Final — Offer Strength (centered) */}
           <Card className="mc-card">
             <CardContent className="p-6 md:p-8" style={{ textAlign: "center" }}>
               <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
@@ -750,7 +735,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* brief summary (centered cards) */}
               <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(2, minmax(0,1fr))", maxWidth: 680, margin: "18px auto 0" }}>
                 <SummaryKV label="Competition" value={COMPETITION_OPTIONS.find(o=>o.id===competition)?.label || ""} />
                 <SummaryKV label="Financing" value={`${FINANCING_OPTIONS.find(o=>o.id===financing)?.label?.split(" — ")[0]} • ${downPct}% down`} />
@@ -760,7 +744,6 @@ export default function App() {
                 <SummaryKV label="EMD" value={`${emdPct}% of offer`} />
               </div>
 
-              {/* recommendations (EN) */}
               <div style={{ marginTop: 18 }}>
                 <p className="text-sm font-medium" style={{ marginBottom: 8 }}>Recommendations</p>
                 <ul style={{ listStyle: "disc", paddingLeft: 18, margin: "0 auto", textAlign: "left", maxWidth: 680, lineHeight: 1.6 }}>
@@ -796,6 +779,7 @@ ${getRecommendations(recsState).map((x,i)=>`${i+1}. ${x}`).join("\n")}
             </CardContent>
           </Card>
 
+          {/* Footer (center) */}
           <p className="text-center text-xs text-neutral-500" style={{ marginTop: 8 }}>
             © {new Date().getFullYear()} Maison Collective • Built for client education
           </p>
