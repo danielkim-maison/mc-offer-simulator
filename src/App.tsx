@@ -129,7 +129,7 @@ function getRecommendations(state: {
   return rec.slice(0, 5);
 }
 
-/* ------------- Reusable UI: Option Tile (clear active state) ------------- */
+/* ------------- Reusable UI: Option Tile (more space & clearer active) ------------- */
 function OptionTile({
   active,
   label,
@@ -139,9 +139,19 @@ function OptionTile({
   label: string;
   onSelect: () => void;
 }) {
-  // 활성화된 상태를 더 눈에 띄게: 체크 아이콘 + 더 밝은 배경/테두리
-  const style: React.CSSProperties = active
-    ? { background: "rgba(255,255,255,.14)", borderColor: "rgba(255,255,255,.55)" }
+  // 더 여백을 주고, 체크 아이콘과 텍스트 사이 간격을 크게
+  const outerStyle: React.CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderRadius: 16,
+    padding: "14px 16px",
+    cursor: "pointer",
+    outline: "none",
+    transition: "background .15s ease, border-color .15s ease, box-shadow .15s ease",
+  };
+  const activeStyle: React.CSSProperties = active
+    ? { background: "rgba(255,255,255,.14)", borderColor: "rgba(255,255,255,.55)", boxShadow: "0 0 0 3px rgba(255,255,255,.06)" }
     : {};
 
   return (
@@ -151,32 +161,69 @@ function OptionTile({
       tabIndex={0}
       onClick={onSelect}
       onKeyDown={(e) => ((e.key === "Enter" || e.key === " ") && onSelect())}
-      className="mc-pill flex items-center justify-between rounded-2xl p-4 md:p-5 cursor-pointer outline-none
-                 transition focus-visible:ring-2 focus-visible:ring-white/20"
-      data-active={active}
-      style={style}
+      className="mc-pill"
+      style={{ ...outerStyle, ...activeStyle, border: "1px solid rgba(255,255,255,.10)", background: active ? "rgba(255,255,255,.14)" : "rgba(255,255,255,.04)" }}
     >
-      <div className="flex items-center gap-3 text-sm md:text-base w-full">
+      <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
+        {/* 체크 아이콘 원형칸 */}
         <span
           aria-hidden
-          className={`h-5 w-5 rounded-full border flex items-center justify-center ${
-            active ? "border-white" : "border-white/40"
-          }`}
-          style={active ? { background: "rgba(255,255,255,.85)", color: "#111" } : {}}
+          style={{
+            height: 22,
+            width: 22,
+            minWidth: 22,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            borderRadius: "999px",
+            border: active ? "1px solid #fff" : "1px solid rgba(255,255,255,.4)",
+            background: active ? "rgba(255,255,255,.85)" : "transparent",
+            color: "#111",
+          }}
         >
           {active ? <CheckCircle2 size={16} color="#111" /> : null}
         </span>
-        <span className="leading-snug">{label}</span>
+
+        {/* 아이콘과 텍스트 사이 여백을 크게(24px) */}
+        <div style={{ width: 24, flex: "0 0 24px" }} />
+
+        {/* 라벨 텍스트 */}
+        <span style={{ lineHeight: 1.4, fontSize: 15 }}>{label}</span>
       </div>
     </div>
   );
 }
 
-function SummaryRow({ label, value }: { label: string; value: string }) {
+/* --------- Reusable UI: Form Row (Label left, input right, tidy) --------- */
+function FormRow({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="flex items-start justify-between gap-4">
-      <span className="text-neutral-400">{label}</span>
-      <span className="text-right text-neutral-100">{value}</span>
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "minmax(160px, 240px) 1fr",
+        alignItems: "center",
+        columnGap: 18,
+        rowGap: 10,
+        width: "100%",
+      }}
+    >
+      <Label className="text-neutral-200" style={{ margin: 0 }}>{label}</Label>
+      <div>{children}</div>
+    </div>
+  );
+}
+
+function SummaryKV({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{ textAlign: "center" }}>
+      <div style={{ opacity: .7, fontSize: 12, marginBottom: 2 }}>{label}</div>
+      <div style={{ fontSize: 14 }}>{value}</div>
     </div>
   );
 }
@@ -326,17 +373,17 @@ export default function App() {
   };
 
   return (
-    <div className="mc-bg min-h-screen">
-      <div className="mx-auto w-full max-w-4xl px-5 sm:px-6 lg:px-8 py-8 lg:py-10">
+    <div className="mc-bg" style={{ minHeight: "100vh" }}>
+      <div style={{ maxWidth: 920, margin: "0 auto", padding: "32px 20px 48px" }}>
         {/* Header (centered) */}
-        <div className="text-center">
+        <div style={{ textAlign: "center" }}>
           <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
             Maison Collective — Offer Strategy Simulator
           </h1>
           <p className="mt-1 text-sm text-neutral-400">
             Make your selections below. Your final Offer Strength appears at the end.
           </p>
-          <div className="mt-4 flex items-center justify-center gap-2">
+          <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 16 }}>
             <Button variant="secondary" className="mc-btn-secondary" onClick={resetAll}>
               <RefreshCcw className="mr-2 h-4 w-4" /> Reset
             </Button>
@@ -346,18 +393,18 @@ export default function App() {
           </div>
         </div>
 
-        <div className="mt-8 space-y-6">
+        <div style={{ marginTop: 24, display: "grid", gap: 16 }}>
           {/* 1. Competition */}
           <Card className="mc-card">
             <CardContent className="p-5 md:p-6">
-              <div className="flex items-center justify-between">
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <h2 className="text-lg font-medium">1. Competition</h2>
                 <Info className="h-4 w-4 text-neutral-400" />
               </div>
               <p className="mt-1 text-sm text-neutral-400">
                 Is there a competition or are you the only offer? Choose one.
               </p>
-              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <div style={{ display: "grid", gap: 12, gridTemplateColumns: "1fr", marginTop: 14 }}>
                 {COMPETITION_OPTIONS.map((opt) => (
                   <OptionTile
                     key={opt.id}
@@ -370,67 +417,68 @@ export default function App() {
             </CardContent>
           </Card>
 
-          {/* 2. Basic Information */}
+          {/* 2. Basic Information (tidy rows) */}
           <Card className="mc-card">
-            <CardContent className="p-5 md:p-6 space-y-4">
-              <div className="flex items-center justify-center gap-2">
+            <CardContent className="p-5 md:p-6">
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                 <Calendar className="h-4 w-4 text-neutral-400" />
-                <h2 className="text-lg font-medium text-center">2. Basic Information</h2>
+                <h2 className="text-lg font-medium" style={{ textAlign: "center" }}>2. Basic Information</h2>
               </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <Label className="text-neutral-200">Property Address</Label>
+
+              <div style={{ display: "grid", gap: 14, marginTop: 16 }}>
+                <FormRow label="Property Address">
                   <Input
                     value={propertyAddress}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPropertyAddress(e.target.value)}
                     placeholder="123 Main St, City, ST"
                   />
-                </div>
-                <div>
-                  <Label className="text-neutral-200">Buyers Names</Label>
+                </FormRow>
+
+                <FormRow label="Buyers Names">
                   <Input
                     value={buyerNames}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setBuyerNames(e.target.value)}
                     placeholder="Jane & John Doe"
                   />
-                </div>
-                <div>
-                  <Label className="text-neutral-200">Preferred Settlement Date</Label>
+                </FormRow>
+
+                <FormRow label="Preferred Settlement Date">
                   <Input
                     type="date"
                     value={settlementDate}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSettlementDate(e.target.value)}
                   />
-                </div>
-                <div>
-                  <Label className="text-neutral-200">Available Total Cash For Strategy ($)</Label>
+                </FormRow>
+
+                <FormRow label="Available Total Cash ($)">
                   <Input
                     inputMode="numeric"
                     value={totalCash}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTotalCash(e.target.value.replace(/[^0-9]/g, ""))}
                     placeholder="e.g., 160000"
                   />
-                </div>
-              </div>
-              <div>
-                <Label className="text-neutral-200">Notes</Label>
-                <Textarea
-                  value={notes}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNotes(e.target.value)}
-                  placeholder="Renovation budget, timeline constraints, etc."
-                />
+                </FormRow>
+
+                <FormRow label="Notes">
+                  <Textarea
+                    value={notes}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNotes(e.target.value)}
+                    placeholder="Renovation budget, timeline constraints, etc."
+                  />
+                </FormRow>
               </div>
             </CardContent>
           </Card>
 
           {/* 3. Financing Method */}
           <Card className="mc-card">
-            <CardContent className="p-5 md:p-6 space-y-4">
-              <div className="flex items-center justify-center gap-2">
+            <CardContent className="p-5 md:p-6">
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                 <BarChart3 className="h-4 w-4 text-neutral-400" />
-                <h2 className="text-lg font-medium text-center">3. Financing Method</h2>
+                <h2 className="text-lg font-medium" style={{ textAlign: "center" }}>3. Financing Method</h2>
               </div>
-              <div className="grid gap-3">
+
+              <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
                 {FINANCING_OPTIONS.map((opt) => (
                   <OptionTile
                     key={opt.id}
@@ -440,11 +488,12 @@ export default function App() {
                   />
                 ))}
               </div>
-              <div className="pt-2">
+
+              <div style={{ marginTop: 16 }}>
                 <Label className="text-neutral-200">Down Payment (%)</Label>
-                <div className="mt-2 flex items-center gap-4">
+                <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 8 }}>
                   <Slider value={[downPct]} min={0} max={100} step={1} onValueChange={(v) => setDownPct(v[0])} className="w-full" />
-                  <div className="w-16 text-right text-sm">{downPct}%</div>
+                  <div style={{ width: 54, textAlign: "right", fontSize: 14 }}>{downPct}%</div>
                 </div>
               </div>
             </CardContent>
@@ -452,9 +501,9 @@ export default function App() {
 
           {/* 4. Home Sale Contingency */}
           <Card className="mc-card">
-            <CardContent className="p-5 md:p-6 space-y-4">
-              <h2 className="text-lg font-medium text-center">4. Home Sale Contingency</h2>
-              <div className="grid gap-3 sm:grid-cols-2">
+            <CardContent className="p-5 md:p-6">
+              <h2 className="text-lg font-medium" style={{ textAlign: "center" }}>4. Home Sale Contingency</h2>
+              <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
                 {SALE_CONTINGENCY.map((opt) => (
                   <OptionTile
                     key={opt.id}
@@ -469,26 +518,28 @@ export default function App() {
 
           {/* 5. Earnest Money Deposit (EMD) */}
           <Card className="mc-card">
-            <CardContent className="p-5 md:p-6 space-y-4">
-              <h2 className="text-lg font-medium text-center">5. Earnest Money Deposit (EMD)</h2>
-              <p className="text-sm text-neutral-400 text-center">Signals seriousness. Held by title/brokerage and credited at closing.</p>
-              <div className="flex items-center gap-4">
+            <CardContent className="p-5 md:p-6">
+              <h2 className="text-lg font-medium" style={{ textAlign: "center" }}>5. Earnest Money Deposit (EMD)</h2>
+              <p className="text-sm text-neutral-400" style={{ textAlign: "center", marginTop: 6 }}>
+                Signals seriousness. Held by title/brokerage and credited at closing.
+              </p>
+              <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 12 }}>
                 <Slider value={[emdPct]} min={0} max={20} step={1} onValueChange={(v) => setEmdPct(v[0])} className="w-full" />
-                <div className="w-20 text-right text-sm">{emdPct}%</div>
+                <div style={{ width: 64, textAlign: "right", fontSize: 14 }}>{emdPct}%</div>
               </div>
-              <div className="flex justify-center gap-2 text-xs text-neutral-400">
-                <span className="rounded bg-white/5 px-2 py-1">2% — Standard</span>
-                <span className="rounded bg-white/5 px-2 py-1">5% — Strong</span>
-                <span className="rounded bg-white/5 px-2 py-1">10%+ — Very Strong</span>
+              <div style={{ display: "flex", justifyContent: "center", gap: 8, fontSize: 12, opacity: .8, marginTop: 8 }}>
+                <span className="rounded" style={{ background: "rgba(255,255,255,.06)", padding: "4px 8px" }}>2% — Standard</span>
+                <span className="rounded" style={{ background: "rgba(255,255,255,.06)", padding: "4px 8px" }}>5% — Strong</span>
+                <span className="rounded" style={{ background: "rgba(255,255,255,.06)", padding: "4px 8px" }}>10%+ — Very Strong</span>
               </div>
             </CardContent>
           </Card>
 
           {/* 6. Home Inspection Contingency */}
           <Card className="mc-card">
-            <CardContent className="p-5 md:p-6 space-y-4">
-              <h2 className="text-lg font-medium text-center">6. Home Inspection Contingency</h2>
-              <div className="grid gap-3">
+            <CardContent className="p-5 md:p-6">
+              <h2 className="text-lg font-medium" style={{ textAlign: "center" }}>6. Home Inspection Contingency</h2>
+              <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
                 {INSPECTION_OPTIONS.map((opt) => (
                   <OptionTile
                     key={opt.id}
@@ -498,15 +549,16 @@ export default function App() {
                   />
                 ))}
               </div>
+
               {inspection === "aLaCarte" && (
-                <div className="mt-2">
+                <div style={{ marginTop: 12 }}>
                   <Label className="text-neutral-200">Pick specific tests (optional)</Label>
-                  <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-4">
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0,1fr))", gap: 10, marginTop: 10 }}>
                     {["Structural & Mechanical","Mold","Environmental","Radon","Chimney","Lead-Based Paint","Wood Destroying Insect"].map((k) => {
                       const id = k.toLowerCase().replace(/[^a-z0-9]+/g, "-");
                       const checked = inspectionChecks.includes(id);
                       return (
-                        <label key={id} className="flex items-center gap-2 text-sm">
+                        <label key={id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}>
                           <input
                             type="checkbox"
                             checked={checked}
@@ -528,9 +580,9 @@ export default function App() {
 
           {/* 7. Appraisal & Financing Contingency */}
           <Card className="mc-card">
-            <CardContent className="p-5 md:p-6 space-y-4">
-              <h2 className="text-lg font-medium text-center">7. Appraisal & Financing Contingency</h2>
-              <div className="grid gap-3">
+            <CardContent className="p-5 md:p-6">
+              <h2 className="text-lg font-medium" style={{ textAlign: "center" }}>7. Appraisal & Financing Contingency</h2>
+              <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
                 {APPRAISAL_OPTIONS.map((opt) => (
                   <OptionTile
                     key={opt.id}
@@ -541,7 +593,7 @@ export default function App() {
                 ))}
               </div>
               {appraisal === "gapCover" && (
-                <div className="mt-2">
+                <div style={{ marginTop: 12 }}>
                   <Label className="text-neutral-200">Guarantee to cover appraisal gap up to ($)</Label>
                   <Input
                     inputMode="numeric"
@@ -551,10 +603,12 @@ export default function App() {
                     }
                     placeholder="e.g., 10000"
                   />
-                  <p className="mt-1 text-xs text-neutral-400 text-center">+1 score per $5,000 guaranteed (max +10)</p>
+                  <p className="mt-1 text-xs text-neutral-400" style={{ textAlign: "center", marginTop: 6 }}>
+                    +1 score per $5,000 guaranteed (max +10)
+                  </p>
                 </div>
               )}
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div style={{ display: "grid", gap: 12, marginTop: 12, gridTemplateColumns: "1fr" }}>
                 {FINANCING_CONT.map((opt) => (
                   <OptionTile
                     key={opt.id}
@@ -569,38 +623,34 @@ export default function App() {
 
           {/* 8. Recordation / Transfer Tax / Title Company */}
           <Card className="mc-card">
-            <CardContent className="p-5 md:p-6 space-y-4">
-              <h2 className="text-lg font-medium text-center">8. Recordation / Transfer Tax / Title Company</h2>
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-3">
-                  {TAX_TITLE_SPLIT.map((opt) => (
-                    <OptionTile
-                      key={opt.id}
-                      active={taxSplit === opt.id}
-                      label={opt.label}
-                      onSelect={() => setTaxSplit(opt.id)}
-                    />
-                  ))}
-                </div>
-                <div className="space-y-3">
-                  {TITLE_PREF.map((opt) => (
-                    <OptionTile
-                      key={opt.id}
-                      active={titlePref === opt.id}
-                      label={opt.label}
-                      onSelect={() => setTitlePref(opt.id)}
-                    />
-                  ))}
-                </div>
+            <CardContent className="p-5 md:p-6">
+              <h2 className="text-lg font-medium" style={{ textAlign: "center" }}>8. Recordation / Transfer Tax / Title Company</h2>
+              <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
+                {TAX_TITLE_SPLIT.map((opt) => (
+                  <OptionTile
+                    key={opt.id}
+                    active={taxSplit === opt.id}
+                    label={opt.label}
+                    onSelect={() => setTaxSplit(opt.id)}
+                  />
+                ))}
+                {TITLE_PREF.map((opt) => (
+                  <OptionTile
+                    key={opt.id}
+                    active={titlePref === opt.id}
+                    label={opt.label}
+                    onSelect={() => setTitlePref(opt.id)}
+                  />
+                ))}
               </div>
             </CardContent>
           </Card>
 
           {/* 9. Commission */}
           <Card className="mc-card">
-            <CardContent className="p-5 md:p-6 space-y-4">
-              <h2 className="text-lg font-medium text-center">9. Commission</h2>
-              <div className="grid gap-3 sm:grid-cols-2">
+            <CardContent className="p-5 md:p-6">
+              <h2 className="text-lg font-medium" style={{ textAlign: "center" }}>9. Commission</h2>
+              <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
                 {COMMISSION.map((opt) => (
                   <OptionTile
                     key={opt.id}
@@ -610,80 +660,80 @@ export default function App() {
                   />
                 ))}
               </div>
-              <p className="text-xs text-neutral-400 text-center">
+              <p className="text-xs text-neutral-400" style={{ textAlign: "center", marginTop: 10 }}>
                 Note: Commission structures are evolving; your agent will confirm what the seller offers on this listing.
               </p>
             </CardContent>
           </Card>
 
-          {/* 10. Offer Price & Escalation */}
+          {/* 10. Offer Price & Escalation (tidy rows) */}
           <Card className="mc-card">
-            <CardContent className="p-5 md:p-6 space-y-4">
-              <h2 className="text-lg font-medium text-center">10. Offer Price & Escalation</h2>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <Label className="text-neutral-200">Seller Asking (List Price)</Label>
+            <CardContent className="p-5 md:p-6">
+              <h2 className="text-lg font-medium" style={{ textAlign: "center" }}>10. Offer Price & Escalation</h2>
+
+              <div style={{ display: "grid", gap: 14, marginTop: 16 }}>
+                <FormRow label="Seller Asking (List Price)">
                   <Input
                     inputMode="numeric"
                     value={listPrice}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setListPrice(e.target.value.replace(/[^0-9]/g, ""))}
                     placeholder="e.g., 875000"
                   />
-                </div>
-                <div>
-                  <Label className="text-neutral-200">Your Offer Price</Label>
+                </FormRow>
+
+                <FormRow label="Your Offer Price">
                   <Input
                     inputMode="numeric"
                     value={offerPrice}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOfferPrice(e.target.value.replace(/[^0-9]/g, ""))}
                     placeholder="e.g., 895000"
                   />
-                </div>
-                <div>
-                  <Label className="text-neutral-200">Escalation Up To</Label>
+                </FormRow>
+
+                <FormRow label="Escalation Up To">
                   <Input
                     inputMode="numeric"
                     value={escalationCap}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEscalationCap(e.target.value.replace(/[^0-9]/g, ""))}
                     placeholder="e.g., 920000"
                   />
-                </div>
-                <div>
-                  <Label className="text-neutral-200">Escalation By (increment)</Label>
+                </FormRow>
+
+                <FormRow label="Escalation By (increment)">
                   <Input
                     inputMode="numeric"
                     value={escalationBy}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEscalationBy(e.target.value.replace(/[^0-9]/g, ""))}
                     placeholder="e.g., 5000"
                   />
-                </div>
-              </div>
-              <div>
-                <Label className="text-neutral-200">Rent-back</Label>
-                <div className="mt-2 grid gap-3 md:grid-cols-3">
-                  {RENTBACK.map((opt) => (
-                    <OptionTile
-                      key={opt.id}
-                      active={rentback === opt.id}
-                      label={opt.label}
-                      onSelect={() => setRentback(opt.id)}
-                    />
-                  ))}
-                </div>
+                </FormRow>
+
+                <FormRow label="Rent-back">
+                  <div style={{ display: "grid", gap: 10 }}>
+                    {RENTBACK.map((opt) => (
+                      <OptionTile
+                        key={opt.id}
+                        active={rentback === opt.id}
+                        label={opt.label}
+                        onSelect={() => setRentback(opt.id)}
+                      />
+                    ))}
+                  </div>
+                </FormRow>
               </div>
             </CardContent>
           </Card>
 
-          {/* Final — Offer Strength */}
+          {/* Final — Offer Strength (everything centered) */}
           <Card className="mc-card">
-            <CardContent className="p-6 md:p-8">
-              <div className="flex items-center justify-center gap-2">
+            <CardContent className="p-6 md:p-8" style={{ textAlign: "center" }}>
+              <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                 <Sparkles className="h-5 w-5 text-neutral-300" />
-                <h2 className="text-xl md:text-2xl font-semibold text-center">Final Offer Strength</h2>
+                <h2 className="text-xl md:text-2xl font-semibold">Final Offer Strength</h2>
               </div>
 
-              <div className="mt-5">
-                <div className="mc-bar">
+              <div style={{ marginTop: 18 }}>
+                <div className="mc-bar" style={{ margin: "0 auto", maxWidth: 560 }}>
                   <motion.div
                     className="mc-bar-fill"
                     initial={{ width: 0 }}
@@ -691,34 +741,34 @@ export default function App() {
                     transition={{ type: "spring", stiffness: 80, damping: 20 }}
                   />
                 </div>
-                <div className="mt-3 flex items-center justify-center gap-3">
-                  <div className="text-3xl font-semibold">{score}</div>
-                  <div className="rounded-full border border-white/15 bg-white/8 px-3 py-1 text-sm text-neutral-200">
-                    <span className="mr-1">{badge.emoji}</span>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 10 }}>
+                  <div style={{ fontSize: 32, fontWeight: 600 }}>{score}</div>
+                  <div className="rounded-full" style={{ border: "1px solid rgba(255,255,255,.15)", background: "rgba(255,255,255,.08)", padding: "6px 10px", fontSize: 14 }}>
+                    <span style={{ marginRight: 6 }}>{badge.emoji}</span>
                     {badge.label}
                   </div>
                 </div>
               </div>
 
-              {/* brief summary */}
-              <div className="mt-6 grid gap-3 text-sm md:grid-cols-2">
-                <SummaryRow label="Competition" value={COMPETITION_OPTIONS.find(o=>o.id===competition)?.label || ""} />
-                <SummaryRow label="Financing" value={`${FINANCING_OPTIONS.find(o=>o.id===financing)?.label?.split(" — ")[0]} • ${downPct}% down`} />
-                <SummaryRow label="Appraisal" value={APPRAISAL_OPTIONS.find(o=>o.id===appraisal)?.label || ""} />
-                <SummaryRow label="Price" value={`List $${Number(listPrice||0).toLocaleString()} → Offer $${Number(offerPrice||0).toLocaleString()}`} />
-                {appraisal === "gapCover" && <SummaryRow label="Gap cover" value={`Up to $${gapAmount.toLocaleString()}`} />}
-                <SummaryRow label="EMD" value={`${emdPct}% of offer`} />
+              {/* brief summary (centered cards) */}
+              <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(2, minmax(0,1fr))", maxWidth: 680, margin: "18px auto 0" }}>
+                <SummaryKV label="Competition" value={COMPETITION_OPTIONS.find(o=>o.id===competition)?.label || ""} />
+                <SummaryKV label="Financing" value={`${FINANCING_OPTIONS.find(o=>o.id===financing)?.label?.split(" — ")[0]} • ${downPct}% down`} />
+                <SummaryKV label="Appraisal" value={APPRAISAL_OPTIONS.find(o=>o.id===appraisal)?.label || ""} />
+                <SummaryKV label="Price" value={`List $${Number(listPrice||0).toLocaleString()} → Offer $${Number(offerPrice||0).toLocaleString()}`} />
+                {appraisal === "gapCover" && <SummaryKV label="Gap cover" value={`Up to $${gapAmount.toLocaleString()}`} />}
+                <SummaryKV label="EMD" value={`${emdPct}% of offer`} />
               </div>
 
               {/* recommendations (EN) */}
-              <div className="mt-6">
-                <p className="text-sm font-medium mb-2 text-center">Recommendations</p>
-                <ul className="list-disc pl-5 space-y-1 text-sm text-neutral-200 max-w-2xl mx-auto">
-                  {getRecommendations(recsState).map((r, i) => (<li key={i}>{r}</li>))}
+              <div style={{ marginTop: 18 }}>
+                <p className="text-sm font-medium" style={{ marginBottom: 8 }}>Recommendations</p>
+                <ul style={{ listStyle: "disc", paddingLeft: 18, margin: "0 auto", textAlign: "left", maxWidth: 680, lineHeight: 1.6 }}>
+                  {getRecommendations(recsState).map((r, i) => (<li key={i} style={{ fontSize: 14 }}>{r}</li>))}
                 </ul>
               </div>
 
-              <div className="mt-6 flex items-center justify-center gap-2">
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 16 }}>
                 <Button
                   onClick={() => {
                     const txt = `Offer Plan (Score ${score} – ${badge.label})
@@ -740,13 +790,13 @@ ${getRecommendations(recsState).map((x,i)=>`${i+1}. ${x}`).join("\n")}
                 </Button>
               </div>
 
-              <p className="mt-5 text-xs text-neutral-400 text-center">
+              <p className="mt-5 text-xs text-neutral-400" style={{ textAlign: "center" }}>
                 This output is educational. We will finalize with listing feedback and local norms before drafting.
               </p>
             </CardContent>
           </Card>
 
-          <p className="text-center text-xs text-neutral-500">
+          <p className="text-center text-xs text-neutral-500" style={{ marginTop: 8 }}>
             © {new Date().getFullYear()} Maison Collective • Built for client education
           </p>
         </div>
