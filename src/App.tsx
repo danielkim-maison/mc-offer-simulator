@@ -342,11 +342,6 @@ export default function App() {
       <p className="mt-1 text-sm text-neutral-400">
         Make your selections below. Your Offer Strength updates live.
       </p>
-      <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 16 }}>
-        <Button variant="secondary" className="mc-btn-secondary" onClick={resetAll}>
-          <RefreshCcw className="mr-2 h-4 w-4" /> Reset
-        </Button>
-      </div>
     </div>
   );
 
