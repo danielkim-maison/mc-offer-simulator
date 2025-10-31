@@ -1,6 +1,6 @@
 ﻿import React, { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Info, RefreshCcw, Sparkles, Calendar, BarChart3, CheckCircle2 } from "lucide-react";
+import { Info, RefreshCcw, Sparkles, CheckCircle2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -342,11 +342,7 @@ export default function App() {
       <p className="mt-1 text-sm text-neutral-400">
         Make your selections below. Your Offer Strength updates live.
       </p>
-      <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 16 }}>
-        <Button variant="secondary" className="mc-btn-secondary" onClick={resetAll}>
-          <RefreshCcw className="mr-2 h-4 w-4" /> Reset
-        </Button>
-      </div>
+      {/* Reset 버튼은 Offer Strength 카드 안으로 이동 */}
     </div>
   );
 
@@ -376,6 +372,13 @@ export default function App() {
                 {badge.label}
               </div>
             </div>
+          </div>
+
+          {/* Reset 버튼을 카드 안에 배치 (compact/regular 공통) */}
+          <div style={{ display: "flex", justifyContent: "center", marginTop: 12 }}>
+            <Button variant="secondary" className="mc-btn-secondary" onClick={resetAll}>
+              <RefreshCcw className="mr-2 h-4 w-4" /> Reset
+            </Button>
           </div>
 
           <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(2, minmax(0,1fr))", maxWidth: 680, margin: "16px auto 0" }}>
@@ -442,7 +445,6 @@ export default function App() {
             <Card className="mc-card">
               <CardContent className="p-5 md:p-6">
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <Calendar className="h-4 w-4 text-neutral-400" />
                   <h2 className="text-lg font-medium">2. Basic Information</h2>
                 </div>
 
@@ -470,7 +472,6 @@ export default function App() {
             <Card className="mc-card">
               <CardContent className="p-5 md:p-6">
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <BarChart3 className="h-4 w-4 text-neutral-400" />
                   <h2 className="text-lg font-medium">3. Financing Method</h2>
                 </div>
 
@@ -648,7 +649,7 @@ export default function App() {
               </CardContent>
             </Card>
 
-            {/* 모바일용 최종 요약 (데스크탑에선 숨김 효과: 아래에서 조건부 렌더) */}
+            {/* 모바일용 최종 요약 */}
             {!isWide && <OfferStrengthCard />}
             <p className="text-center text-xs text-neutral-500" style={{ marginTop: 8 }}>
               © {new Date().getFullYear()} Maison Collective • Built for client education
