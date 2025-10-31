@@ -95,7 +95,7 @@ function getRecommendations(state: {
   const lp = Number(state.listPrice) || 0;
   const op = Number(state.offerPrice) || 0;
 
-  if (state.competition !== "solo" && (op <= lp)) {
+  if (state.competition !== "solo" && op <= lp) {
     rec.push("In competitive situations, consider offering 0.5–1.0% above list or enabling escalation.");
   }
   if (state.emdPct < 5) rec.push("Increase EMD to at least 5% to improve perceived commitment.");
@@ -302,7 +302,6 @@ export default function App() {
   ]);
   const badge = useMemo(() => labelForScore(score), [score]);
 
-  // Reset
   function resetAll() {
     setCompetition("maybe");
     setPropertyAddress("");
@@ -329,7 +328,29 @@ export default function App() {
     setRentback("none");
   }
 
-  // Save (download JSON)
+  const recsState = {
+    competition, financing, downPct, emdPct, inspection, appraisal, finCont,
+    taxSplit, titlePref, commission, listPrice, offerPrice, rentback,
+  };
+
+  // ----- Header -----
+  const Header = (
+    <div style={{ textAlign: "center" }}>
+      <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
+        Maison Collective — Offer Strategy Simulator
+      </h1>
+      <p className="mt-1 text-sm text-neutral-400">
+        Make your selections below. Your Offer Strength updates live.
+      </p>
+      <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 16 }}>
+        <Button variant="secondary" className="mc-btn-secondary" onClick={resetAll}>
+          <RefreshCcw className="mr-2 h-4 w-4" /> Reset
+        </Button>
+      </div>
+    </div>
+  );
+
+  // ----- Save helper -----
   function saveScenario() {
     const data = {
       competition,
@@ -357,160 +378,144 @@ export default function App() {
     URL.revokeObjectURL(url);
   }
 
-  const recsState = {
-    competition, financing, downPct, emdPct, inspection, appraisal, finCont,
-    taxSplit, titlePref, commission, listPrice, offerPrice, rentback,
-  };
-
-  // ----- UI: Header -----
-  const Header = (
-    <div style={{ textAlign: "center" }}>
-      <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-        Maison Collective — Offer Strategy Simulator
-      </h1>
-      <p className="mt-1 text-sm text-neutral-400">
-        Make your selections below. Your Offer Strength updates live.
-      </p>
-    </div>
-  );
-
-  // ----- UI: Live Offer Strength card (reusable) -----
+  // ----- Offer Strength (sticky / also on mobile) -----
   function OfferStrengthCard({ compact }: { compact?: boolean }) {
-  return (
-    <Card className="mc-card">
-      <CardContent className="p-5 md:p-6" style={{ textAlign: "center" }}>
-        {/* 헤더 */}
-        <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-          <Sparkles className="h-5 w-5 text-neutral-300" />
-          <h2 className="text-xl md:text-2xl font-semibold">
-            {compact ? "Offer Strength" : "Final Offer Strength"}
-          </h2>
-        </div>
+    const maxBarWidth = compact ? 340 : 560;
+    const cardPadding = compact ? "18px" : "24px";
 
-        {/* 바 + 점수/라벨 */}
-        <div style={{ marginTop: 16 }}>
-          <div className="mc-bar" style={{ margin: "0 auto", maxWidth: compact ? 280 : 560 }}>
-            <motion.div
-              className="mc-bar-fill"
-              initial={{ width: 0 }}
-              animate={{ width: `${score}%` }}
-              transition={{ type: "spring", stiffness: 80, damping: 20 }}
-            />
+    return (
+      <Card className="mc-card">
+        <CardContent className="p-5 md:p-6" style={{ textAlign: "center", padding: cardPadding }}>
+          {/* Title */}
+          <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            <Sparkles className="h-5 w-5 text-neutral-300" />
+            <h2 className="text-xl md:text-2xl font-semibold">
+              {compact ? "Offer Strength" : "Final Offer Strength"}
+            </h2>
           </div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 10 }}>
-            <div style={{ fontSize: compact ? 26 : 32, fontWeight: 600 }}>{score}</div>
-            <div
-              className="rounded-full"
-              style={{
-                border: "1px solid rgba(255,255,255,.15)",
-                background: "rgba(255,255,255,.08)",
-                padding: "6px 10px",
-                fontSize: 14,
-              }}
-            >
-              <span style={{ marginRight: 6 }}>{badge.emoji}</span>
-              {badge.label}
+
+          {/* Bar + Score */}
+          <div style={{ marginTop: 16 }}>
+            <div className="mc-bar" style={{ margin: "0 auto", maxWidth: maxBarWidth }}>
+              <motion.div
+                className="mc-bar-fill"
+                initial={{ width: 0 }}
+                animate={{ width: `${score}%` }}
+                transition={{ type: "spring", stiffness: 80, damping: 20 }}
+              />
             </div>
-          </div>
-        </div>
-
-        {/* ✅ 미니 요약 그리드: compact=true/false 모두에서 항상 표시 */}
-        <div
-          style={{
-            display: "grid",
-            gap: 12,
-            gridTemplateColumns: "repeat(2, minmax(0,1fr))",
-            maxWidth: 680,
-            margin: "16px auto 0",
-          }}
-        >
-          <SummaryKV
-            label="Competition"
-            value={COMPETITION_OPTIONS.find((o) => o.id === competition)?.label || ""}
-          />
-          <SummaryKV
-            label="Financing"
-            value={`${
-              FINANCING_OPTIONS.find((o) => o.id === financing)?.label?.split(" — ")[0]
-            } • ${downPct}% down`}
-          />
-          <SummaryKV
-            label="Appraisal"
-            value={APPRAISAL_OPTIONS.find((o) => o.id === appraisal)?.label || ""}
-          />
-          <SummaryKV
-            label="Price"
-            value={`List $${Number(listPrice || 0).toLocaleString()} → Offer $${Number(
-              offerPrice || 0
-            ).toLocaleString()}`}
-          />
-          {appraisal === "gapCover" && (
-            <SummaryKV label="Gap cover" value={`Up to $${gapAmount.toLocaleString()}`} />
-          )}
-          <SummaryKV label="EMD" value={`${emdPct}% of offer`} />
-        </div>
-
-        {/* 추천 & 디스클레이머: 데스크탑(비-콤팩트)에서만 노출 */}
-        {!compact && (
-          <>
-            <div style={{ marginTop: 18 }}>
-              <p className="text-sm font-medium" style={{ marginBottom: 8 }}>
-                Recommendations
-              </p>
-              <ul
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 10 }}>
+              <div style={{ fontSize: compact ? 26 : 32, fontWeight: 600 }}>{score}</div>
+              <div
+                className="rounded-full"
                 style={{
-                  listStyle: "disc",
-                  paddingLeft: 18,
-                  margin: "0 auto",
-                  textAlign: "left",
-                  maxWidth: 680,
-                  lineHeight: 1.6,
+                  border: "1px solid rgba(255,255,255,.15)",
+                  background: "rgba(255,255,255,.08)",
+                  padding: "6px 10px",
+                  fontSize: 14,
                 }}
               >
-                {getRecommendations(recsState).map((r, i) => (
-                  <li key={i} style={{ fontSize: 14 }}>
-                    {r}
-                  </li>
-                ))}
-              </ul>
+                <span style={{ marginRight: 6 }}>{badge.emoji}</span>
+                {badge.label}
+              </div>
             </div>
-            <p className="mt-5 text-xs text-neutral-400" style={{ textAlign: "center" }}>
-              This output is educational. We will finalize with listing feedback and local norms before drafting.
+          </div>
+
+          {/* Summary */}
+          <div
+            style={{
+              display: "grid",
+              gap: 12,
+              gridTemplateColumns: "repeat(2, minmax(0,1fr))",
+              maxWidth: compact ? 360 : 680,
+              margin: "16px auto 0",
+            }}
+          >
+            <SummaryKV
+              label="Competition"
+              value={COMPETITION_OPTIONS.find((o) => o.id === competition)?.label || ""}
+            />
+            <SummaryKV
+              label="Financing"
+              value={`${FINANCING_OPTIONS.find((o) => o.id === financing)?.label?.split(" — ")[0]} • ${downPct}% down`}
+            />
+            <SummaryKV
+              label="Appraisal"
+              value={APPRAISAL_OPTIONS.find((o) => o.id === appraisal)?.label || ""}
+            />
+            <SummaryKV
+              label="Price"
+              value={`List $${Number(listPrice || 0).toLocaleString()} → Offer $${Number(
+                offerPrice || 0
+              ).toLocaleString()}`}
+            />
+            {appraisal === "gapCover" && (
+              <SummaryKV label="Gap cover" value={`Up to $${gapAmount.toLocaleString()}`} />
+            )}
+            <SummaryKV label="EMD" value={`${emdPct}% of offer`} />
+          </div>
+
+          {/* Recommendations (always visible) */}
+          <div style={{ marginTop: 16 }}>
+            <p className="text-sm font-medium" style={{ marginBottom: 8 }}>
+              Recommendations
             </p>
-          </>
-        )}
+            <ul
+              style={{
+                listStyle: "disc",
+                paddingLeft: 18,
+                margin: "0 auto",
+                textAlign: "left",
+                maxWidth: compact ? 360 : 680,
+                lineHeight: 1.6,
+              }}
+            >
+              {getRecommendations(recsState).map((r, i) => (
+                <li key={i} style={{ fontSize: 14 }}>
+                  {r}
+                </li>
+              ))}
+            </ul>
+          </div>
 
-        {/* ⬇️ 맨 아래 버튼들만 추가 (Reset / Save) */}
-        <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 18 }}>
-          <Button variant="secondary" className="mc-btn-secondary" onClick={resetAll} title="Clear all fields">
-            <RefreshCcw className="mr-2 h-4 w-4" /> Reset
-          </Button>
-          <Button onClick={saveScenario} title="Download current selections">
-            <Download className="mr-2 h-4 w-4" /> Save
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
+          {/* Disclaimer */}
+          <p
+            className="mt-5 text-xs text-neutral-400"
+            style={{ textAlign: "center", marginTop: 12, opacity: compact ? 0.85 : 1 }}
+          >
+            This output is educational. We will finalize with listing feedback and local norms before drafting.
+          </p>
 
+          {/* Actions */}
+          <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 16 }}>
+            <Button variant="secondary" className="mc-btn-secondary" onClick={resetAll} title="Clear all fields">
+              <RefreshCcw className="mr-2 h-4 w-4" /> Reset
+            </Button>
+            <Button onClick={saveScenario} title="Download current selections">
+              <Download className="mr-2 h-4 w-4" /> Save
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="mc-bg" style={{ minHeight: "100vh" }}>
       <div style={{ maxWidth: 1180, margin: "0 auto", padding: "32px 20px 48px" }}>
         {Header}
 
-        {/* 메인 레이아웃: 데스크탑은 질문(좌) + 실시간 요약(우, sticky) */}
+        {/* Main layout: Questions (left) + Live Summary (right, sticky) */}
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: isWide ? "1fr 340px" : "1fr",
+            gridTemplateColumns: isWide ? "1fr 380px" : "1fr",
             gap: isWide ? 24 : 20,
             alignItems: "start",
             marginTop: 24,
           }}
         >
-          {/* Left: 질문들 (섹션 간 간격 넉넉) */}
+          {/* Left: Questions */}
           <div style={{ display: "grid", gap: isWide ? 28 : 22 }}>
             {/* 1. Competition */}
             <Card className="mc-card">
@@ -726,7 +731,7 @@ export default function App() {
                     <Input inputMode="numeric" value={escalationBy} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEscalationBy(e.target.value.replace(/[^0-9]/g, ""))} placeholder="e.g., 5000" />
                   </FormRow>
 
-                  {/* Rent-back: 라벨 없이 옵션만 왼쪽 정렬 */}
+                  {/* Rent-back options (label removed; left-aligned list) */}
                   <div style={{ display: "grid", gap: 10, marginTop: 4 }}>
                     {RENTBACK.map((opt) => (
                       <OptionTile key={opt.id} active={rentback === opt.id} label={opt.label} onSelect={() => setRentback(opt.id)} fullWidth />
@@ -736,14 +741,14 @@ export default function App() {
               </CardContent>
             </Card>
 
-            {/* 모바일용 최종 요약 */}
+            {/* Mobile: Final card at bottom */}
             {!isWide && <OfferStrengthCard />}
             <p className="text-center text-xs text-neutral-500" style={{ marginTop: 8 }}>
               © {new Date().getFullYear()} Maison Collective • Built for client education
             </p>
           </div>
 
-          {/* Right: 데스크탑 sticky 요약 */}
+          {/* Right: Sticky live summary */}
           {isWide && (
             <div style={{ position: "sticky", top: 24 }}>
               <OfferStrengthCard compact />
