@@ -1,6 +1,6 @@
 ﻿import React, { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Info, RefreshCcw, Sparkles, CheckCircle2 } from "lucide-react";
+import { Info, RefreshCcw, Sparkles, CheckCircle2, Download } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -302,6 +302,7 @@ export default function App() {
   ]);
   const badge = useMemo(() => labelForScore(score), [score]);
 
+  // Reset
   function resetAll() {
     setCompetition("maybe");
     setPropertyAddress("");
@@ -328,6 +329,34 @@ export default function App() {
     setRentback("none");
   }
 
+  // Save (download JSON)
+  function saveScenario() {
+    const data = {
+      competition,
+      basics: { propertyAddress, buyerNames, settlementDate, totalCash, notes },
+      financing: { type: financing, downPct },
+      saleCont,
+      emdPct,
+      inspection: { type: inspection, checks: inspectionChecks },
+      appraisal: { type: appraisal, gapAmount },
+      finCont,
+      taxesTitle: { taxSplit, titlePref },
+      commission,
+      price: { listPrice, offerPrice, escalationCap, escalationBy },
+      rentback,
+      score,
+      label: badge,
+      exportedAt: new Date().toISOString(),
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `mc-offer-scenario-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   const recsState = {
     competition, financing, downPct, emdPct, inspection, appraisal, finCont,
     taxSplit, titlePref, commission, listPrice, offerPrice, rentback,
@@ -342,7 +371,6 @@ export default function App() {
       <p className="mt-1 text-sm text-neutral-400">
         Make your selections below. Your Offer Strength updates live.
       </p>
-      {/* Reset 버튼은 Offer Strength 카드 안으로 이동 */}
     </div>
   );
 
@@ -374,24 +402,28 @@ export default function App() {
             </div>
           </div>
 
-          {/* Reset 버튼을 카드 안에 배치 (compact/regular 공통) */}
-          <div style={{ display: "flex", justifyContent: "center", marginTop: 12 }}>
-            <Button variant="secondary" className="mc-btn-secondary" onClick={resetAll}>
+          {/* 요약 카드 맨 아래: Reset + Save */}
+          <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 18 }}>
+            <Button variant="secondary" className="mc-btn-secondary" onClick={resetAll} title="Clear all fields">
               <RefreshCcw className="mr-2 h-4 w-4" /> Reset
+            </Button>
+            <Button onClick={saveScenario} title="Download current selections">
+              <Download className="mr-2 h-4 w-4" /> Save
             </Button>
           </div>
 
-          <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(2, minmax(0,1fr))", maxWidth: 680, margin: "16px auto 0" }}>
-            <SummaryKV label="Competition" value={COMPETITION_OPTIONS.find(o=>o.id===competition)?.label || ""} />
-            <SummaryKV label="Financing" value={`${FINANCING_OPTIONS.find(o=>o.id===financing)?.label?.split(" — ")[0]} • ${downPct}% down`} />
-            <SummaryKV label="Appraisal" value={APPRAISAL_OPTIONS.find(o=>o.id===appraisal)?.label || ""} />
-            <SummaryKV label="Price" value={`List $${Number(listPrice||0).toLocaleString()} → Offer $${Number(offerPrice||0).toLocaleString()}`} />
-            {appraisal === "gapCover" && <SummaryKV label="Gap cover" value={`Up to $${gapAmount.toLocaleString()}`} />}
-            <SummaryKV label="EMD" value={`${emdPct}% of offer`} />
-          </div>
-
+          {/* (non-compact일 때만) 추천 + 디스크레머 */}
           {!compact && (
             <>
+              <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(2, minmax(0,1fr))", maxWidth: 680, margin: "18px auto 0" }}>
+                <SummaryKV label="Competition" value={COMPETITION_OPTIONS.find(o=>o.id===competition)?.label || ""} />
+                <SummaryKV label="Financing" value={`${FINANCING_OPTIONS.find(o=>o.id===financing)?.label?.split(" — ")[0]} • ${downPct}% down`} />
+                <SummaryKV label="Appraisal" value={APPRAISAL_OPTIONS.find(o=>o.id===appraisal)?.label || ""} />
+                <SummaryKV label="Price" value={`List $${Number(listPrice||0).toLocaleString()} → Offer $${Number(offerPrice||0).toLocaleString()}`} />
+                {appraisal === "gapCover" && <SummaryKV label="Gap cover" value={`Up to $${gapAmount.toLocaleString()}`} />}
+                <SummaryKV label="EMD" value={`${emdPct}% of offer`} />
+              </div>
+
               <div style={{ marginTop: 18 }}>
                 <p className="text-sm font-medium" style={{ marginBottom: 8 }}>Recommendations</p>
                 <ul style={{ listStyle: "disc", paddingLeft: 18, margin: "0 auto", textAlign: "left", maxWidth: 680, lineHeight: 1.6 }}>
