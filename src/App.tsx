@@ -1,12 +1,6 @@
-﻿import React, { useMemo, useState } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import {
-  Info,
-  RefreshCcw,
-  Download,
-  Sparkles,
-  CheckCircle2,
-} from "lucide-react";
+import { Info, RefreshCcw, Sparkles, Calendar, BarChart3, CheckCircle2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -127,30 +121,28 @@ function getRecommendations(state: {
   return rec.slice(0, 5);
 }
 
-/* ------------- Reusable UI: Option Tile ------------- */
+/* ------------- Reusable UI: Option Tile (spacious & clear active) ------------- */
 function OptionTile({
   active,
   label,
   onSelect,
-  fullWidth = true,
+  fullWidth,
 }: {
   active: boolean;
   label: string;
   onSelect: () => void;
-  /** Rent-back 가로 정렬용이면 false */
   fullWidth?: boolean;
 }) {
   const outerStyle: React.CSSProperties = {
-    display: "inline-flex",
+    display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
     borderRadius: 16,
-    padding: "14px 16px",
+    padding: "16px 18px",
     cursor: "pointer",
     outline: "none",
     transition: "background .15s ease, border-color .15s ease, box-shadow .15s ease",
-    width: fullWidth ? "100%" : "auto",
-    whiteSpace: fullWidth ? "normal" : "nowrap",
+    width: fullWidth ? "100%" : undefined,
   };
   const activeStyle: React.CSSProperties = active
     ? { background: "rgba(255,255,255,.14)", borderColor: "rgba(255,255,255,.55)", boxShadow: "0 0 0 3px rgba(255,255,255,.06)" }
@@ -166,16 +158,12 @@ function OptionTile({
       className="mc-pill"
       style={{ ...outerStyle, ...activeStyle, border: "1px solid rgba(255,255,255,.10)", background: active ? "rgba(255,255,255,.14)" : "rgba(255,255,255,.04)" }}
     >
-      <div style={{ display: "inline-flex", alignItems: "center", width: fullWidth ? "100%" : "auto" }}>
+      <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
         <span
           aria-hidden
           style={{
-            height: 22,
-            width: 22,
-            minWidth: 22,
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
+            height: 22, width: 22, minWidth: 22,
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
             borderRadius: "999px",
             border: active ? "1px solid #fff" : "1px solid rgba(255,255,255,.4)",
             background: active ? "rgba(255,255,255,.85)" : "transparent",
@@ -185,25 +173,19 @@ function OptionTile({
           {active ? <CheckCircle2 size={16} color="#111" /> : null}
         </span>
         <div style={{ width: 24, flex: "0 0 24px" }} />
-        <span style={{ lineHeight: 1.4, fontSize: 15 }}>{label}</span>
+        <span style={{ lineHeight: 1.45, fontSize: 15 }}>{label}</span>
       </div>
     </div>
   );
 }
 
 /* --------- Reusable UI: Form Row --------- */
-function FormRow({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+function FormRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "minmax(150px, 240px) 1fr",
+        gridTemplateColumns: "minmax(160px, 240px) 1fr",
         alignItems: "center",
         columnGap: 18,
         rowGap: 10,
@@ -227,6 +209,15 @@ function SummaryKV({ label, value }: { label: string; value: string }) {
 
 /* ---------------- Main ---------------- */
 export default function App() {
+  // viewport watcher (for responsive grid)
+  const [vw, setVw] = useState<number>(typeof window !== "undefined" ? window.innerWidth : 0);
+  useEffect(() => {
+    const onResize = () => setVw(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  const isWide = vw >= 1024;
+
   // 0 — Competition
   const [competition, setCompetition] = useState<(typeof COMPETITION_OPTIONS)[number]["id"]>("maybe");
 
@@ -311,33 +302,6 @@ export default function App() {
   ]);
   const badge = useMemo(() => labelForScore(score), [score]);
 
-  function downloadScenario() {
-    const data = {
-      competition,
-      basics: { propertyAddress, buyerNames, settlementDate, totalCash, notes },
-      financing: { type: financing, downPct },
-      saleCont,
-      emdPct,
-      inspection: { type: inspection, checks: inspectionChecks },
-      appraisal: { type: appraisal, gapAmount },
-      finCont,
-      taxesTitle: { taxSplit, titlePref },
-      commission,
-      price: { listPrice, offerPrice, escalationCap, escalationBy },
-      rentback,
-      score,
-      label: badge,
-      exportedAt: new Date().toISOString(),
-    };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `mc-offer-scenario-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
   function resetAll() {
     setCompetition("maybe");
     setPropertyAddress("");
@@ -369,442 +333,334 @@ export default function App() {
     taxSplit, titlePref, commission, listPrice, offerPrice, rentback,
   };
 
-  return (
-    <div className="mc-bg" style={{ minHeight: "100vh" }}>
-      <div style={{ maxWidth: 920, margin: "0 auto", padding: "32px 20px 48px" }}>
-        {/* Header */}
-        <div style={{ textAlign: "center" }}>
-          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-            Maison Collective — Offer Strategy Simulator
-          </h1>
-          <p className="mt-1 text-sm text-neutral-400">
-            Make your selections below. Your final Offer Strength appears at the end.
-          </p>
-          <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 16, flexWrap: "wrap" }}>
-            <Button variant="secondary" className="mc-btn-secondary" onClick={resetAll}>
-              <RefreshCcw className="mr-2 h-4 w-4" /> Reset
-            </Button>
-            <Button onClick={downloadScenario}>
-              <Download className="mr-2 h-4 w-4" /> Download JSON
-            </Button>
+  // ----- UI: Header -----
+  const Header = (
+    <div style={{ textAlign: "center" }}>
+      <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
+        Maison Collective — Offer Strategy Simulator
+      </h1>
+      <p className="mt-1 text-sm text-neutral-400">
+        Make your selections below. Your Offer Strength updates live.
+      </p>
+      <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 16 }}>
+        <Button variant="secondary" className="mc-btn-secondary" onClick={resetAll}>
+          <RefreshCcw className="mr-2 h-4 w-4" /> Reset
+        </Button>
+      </div>
+    </div>
+  );
+
+  // ----- UI: Live Offer Strength card (reusable) -----
+  function OfferStrengthCard({ compact }: { compact?: boolean }) {
+    return (
+      <Card className="mc-card" style={compact ? {} : {}}>
+        <CardContent className="p-5 md:p-6" style={{ textAlign: "center" }}>
+          <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            <Sparkles className="h-5 w-5 text-neutral-300" />
+            <h2 className="text-xl md:text-2xl font-semibold">{compact ? "Offer Strength" : "Final Offer Strength"}</h2>
           </div>
-        </div>
 
-        <div style={{ marginTop: 24, display: "grid", gap: 16 }}>
-          {/* 1. Competition */}
-          <Card className="mc-card">
-            <CardContent className="p-5 md:p-6">
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <h2 className="text-lg font-medium">1. Competition</h2>
-                <Info className="h-4 w-4 text-neutral-400" />
+          <div style={{ marginTop: 16 }}>
+            <div className="mc-bar" style={{ margin: "0 auto", maxWidth: compact ? 280 : 560 }}>
+              <motion.div
+                className="mc-bar-fill"
+                initial={{ width: 0 }}
+                animate={{ width: `${score}%` }}
+                transition={{ type: "spring", stiffness: 80, damping: 20 }}
+              />
+            </div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 10 }}>
+              <div style={{ fontSize: compact ? 26 : 32, fontWeight: 600 }}>{score}</div>
+              <div className="rounded-full" style={{ border: "1px solid rgba(255,255,255,.15)", background: "rgba(255,255,255,.08)", padding: "6px 10px", fontSize: 14 }}>
+                <span style={{ marginRight: 6 }}>{badge.emoji}</span>
+                {badge.label}
               </div>
-              <p className="mt-1 text-sm text-neutral-400">
-                Is there a competition or are you the only offer? Choose one.
-              </p>
-              <div style={{ display: "grid", gap: 12, gridTemplateColumns: "1fr", marginTop: 14 }}>
-                {COMPETITION_OPTIONS.map((opt) => (
-                  <OptionTile
-                    key={opt.id}
-                    active={competition === opt.id}
-                    label={opt.label}
-                    onSelect={() => setCompetition(opt.id)}
-                  />
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          {/* 2. Basic Information */}
-          <Card className="mc-card">
-            <CardContent className="p-5 md:p-6">
-              <h2 className="text-lg font-medium">2. Basic Information</h2>
-              <div style={{ display: "grid", gap: 14, marginTop: 12 }}>
-                <FormRow label="Property Address">
-                  <Input
-                    value={propertyAddress}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPropertyAddress(e.target.value)}
-                    placeholder="123 Main St, City, ST"
-                  />
-                </FormRow>
+          <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(2, minmax(0,1fr))", maxWidth: 680, margin: "16px auto 0" }}>
+            <SummaryKV label="Competition" value={COMPETITION_OPTIONS.find(o=>o.id===competition)?.label || ""} />
+            <SummaryKV label="Financing" value={`${FINANCING_OPTIONS.find(o=>o.id===financing)?.label?.split(" — ")[0]} • ${downPct}% down`} />
+            <SummaryKV label="Appraisal" value={APPRAISAL_OPTIONS.find(o=>o.id===appraisal)?.label || ""} />
+            <SummaryKV label="Price" value={`List $${Number(listPrice||0).toLocaleString()} → Offer $${Number(offerPrice||0).toLocaleString()}`} />
+            {appraisal === "gapCover" && <SummaryKV label="Gap cover" value={`Up to $${gapAmount.toLocaleString()}`} />}
+            <SummaryKV label="EMD" value={`${emdPct}% of offer`} />
+          </div>
 
-                <FormRow label="Buyers Names">
-                  <Input
-                    value={buyerNames}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setBuyerNames(e.target.value)}
-                    placeholder="Jane & John Doe"
-                  />
-                </FormRow>
-
-                <FormRow label="Preferred Settlement Date">
-                  <Input
-                    type="date"
-                    value={settlementDate}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSettlementDate(e.target.value)}
-                  />
-                </FormRow>
-
-                <FormRow label="Available Total Cash ($)">
-                  <Input
-                    inputMode="numeric"
-                    value={totalCash}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTotalCash(e.target.value.replace(/[^0-9]/g, ""))}
-                    placeholder="e.g., 160000"
-                  />
-                </FormRow>
-
-                <FormRow label="Notes">
-                  <Textarea
-                    value={notes}
-                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNotes(e.target.value)}
-                    placeholder="Renovation budget, timeline constraints, etc."
-                  />
-                </FormRow>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* 3. Financing Method */}
-          <Card className="mc-card">
-            <CardContent className="p-5 md:p-6">
-              <h2 className="text-lg font-medium">3. Financing Method</h2>
-
-              <div style={{ display: "grid", gap: 12, marginTop: 12 }}>
-                {FINANCING_OPTIONS.map((opt) => (
-                  <OptionTile
-                    key={opt.id}
-                    active={financing === opt.id}
-                    label={opt.label}
-                    onSelect={() => setFinancing(opt.id)}
-                  />
-                ))}
-              </div>
-
-              <div style={{ marginTop: 16 }}>
-                <Label className="text-neutral-200">Down Payment (%)</Label>
-                <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 8 }}>
-                  <Slider value={[downPct]} min={0} max={100} step={1} onValueChange={(v) => setDownPct(v[0])} className="w-full" />
-                  <div style={{ width: 54, textAlign: "right", fontSize: 14 }}>{downPct}%</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* 4. Home Sale Contingency */}
-          <Card className="mc-card">
-            <CardContent className="p-5 md:p-6">
-              <h2 className="text-lg font-medium">4. Home Sale Contingency</h2>
-              <div style={{ display: "grid", gap: 12, marginTop: 12 }}>
-                {SALE_CONTINGENCY.map((opt) => (
-                  <OptionTile
-                    key={opt.id}
-                    active={saleCont === opt.id}
-                    label={opt.label}
-                    onSelect={() => setSaleCont(opt.id)}
-                  />
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* 5. Earnest Money Deposit */}
-          <Card className="mc-card">
-            <CardContent className="p-5 md:p-6">
-              <h2 className="text-lg font-medium">5. Earnest Money Deposit (EMD)</h2>
-              <p className="text-sm text-neutral-400" style={{ marginTop: 6 }}>
-                Signals seriousness. Held by title/brokerage and credited at closing.
-              </p>
-              <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 12 }}>
-                <Slider value={[emdPct]} min={0} max={20} step={1} onValueChange={(v) => setEmdPct(v[0])} className="w-full" />
-                <div style={{ width: 64, textAlign: "right", fontSize: 14 }}>{emdPct}%</div>
-              </div>
-              <div style={{ display: "flex", gap: 8, fontSize: 12, opacity: .8, marginTop: 8, flexWrap: "wrap" }}>
-                <span className="rounded" style={{ background: "rgba(255,255,255,.06)", padding: "4px 8px" }}>2% — Standard</span>
-                <span className="rounded" style={{ background: "rgba(255,255,255,.06)", padding: "4px 8px" }}>5% — Strong</span>
-                <span className="rounded" style={{ background: "rgba(255,255,255,.06)", padding: "4px 8px" }}>10%+ — Very Strong</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* 6. Home Inspection */}
-          <Card className="mc-card">
-            <CardContent className="p-5 md:p-6">
-              <h2 className="text-lg font-medium">6. Home Inspection Contingency</h2>
-              <div style={{ display: "grid", gap: 12, marginTop: 12 }}>
-                {INSPECTION_OPTIONS.map((opt) => (
-                  <OptionTile
-                    key={opt.id}
-                    active={inspection === opt.id}
-                    label={opt.label}
-                    onSelect={() => setInspection(opt.id)}
-                  />
-                ))}
-              </div>
-
-              {inspection === "aLaCarte" && (
-                <div style={{ marginTop: 12 }}>
-                  <Label className="text-neutral-200">Pick specific tests (optional)</Label>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0,1fr))", gap: 10, marginTop: 10 }}>
-                    {["Structural & Mechanical","Mold","Environmental","Radon","Chimney","Lead-Based Paint","Wood Destroying Insect"].map((k) => {
-                      const id = k.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-                      const checked = inspectionChecks.includes(id);
-                      return (
-                        <label key={id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}>
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                              setInspectionChecks((prev) =>
-                                e.target.checked ? [...prev, id] : prev.filter((x) => x !== id)
-                              );
-                            }}
-                          />
-                          <span>{k}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* 7. Appraisal & Financing */}
-          <Card className="mc-card">
-            <CardContent className="p-5 md:p-6">
-              <h2 className="text-lg font-medium">7. Appraisal & Financing Contingency</h2>
-              <div style={{ display: "grid", gap: 12, marginTop: 12 }}>
-                {APPRAISAL_OPTIONS.map((opt) => (
-                  <OptionTile
-                    key={opt.id}
-                    active={appraisal === opt.id}
-                    label={opt.label}
-                    onSelect={() => setAppraisal(opt.id)}
-                  />
-                ))}
-              </div>
-              {appraisal === "gapCover" && (
-                <div style={{ marginTop: 12 }}>
-                  <Label className="text-neutral-200">Guarantee to cover appraisal gap up to ($)</Label>
-                  <Input
-                    inputMode="numeric"
-                    value={gapAmount || ""}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setGapAmount(Number(e.target.value.replace(/[^0-9]/g, "")) || 0)
-                    }
-                    placeholder="e.g., 10000"
-                  />
-                  <p className="mt-1 text-xs text-neutral-400" style={{ marginTop: 6 }}>
-                    +1 score per $5,000 guaranteed (max +10)
-                  </p>
-                </div>
-              )}
-              <div style={{ display: "grid", gap: 12, marginTop: 12, gridTemplateColumns: "1fr" }}>
-                {FINANCING_CONT.map((opt) => (
-                  <OptionTile
-                    key={opt.id}
-                    active={finCont === opt.id}
-                    label={opt.label}
-                    onSelect={() => setFinCont(opt.id)}
-                  />
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* 8. Taxes/Title */}
-          <Card className="mc-card">
-            <CardContent className="p-5 md:p-6">
-              <h2 className="text-lg font-medium">8. Recordation / Transfer Tax / Title Company</h2>
-              <div style={{ display: "grid", gap: 12, marginTop: 12 }}>
-                {TAX_TITLE_SPLIT.map((opt) => (
-                  <OptionTile
-                    key={opt.id}
-                    active={taxSplit === opt.id}
-                    label={opt.label}
-                    onSelect={() => setTaxSplit(opt.id)}
-                  />
-                ))}
-                {TITLE_PREF.map((opt) => (
-                  <OptionTile
-                    key={opt.id}
-                    active={titlePref === opt.id}
-                    label={opt.label}
-                    onSelect={() => setTitlePref(opt.id)}
-                  />
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* 9. Commission */}
-          <Card className="mc-card">
-            <CardContent className="p-5 md:p-6">
-              <h2 className="text-lg font-medium">9. Commission</h2>
-              <div style={{ display: "grid", gap: 12, marginTop: 12 }}>
-                {COMMISSION.map((opt) => (
-                  <OptionTile
-                    key={opt.id}
-                    active={commission === opt.id}
-                    label={opt.label}
-                    onSelect={() => setCommission(opt.id)}
-                  />
-                ))}
-              </div>
-              <p className="text-xs text-neutral-400" style={{ marginTop: 10 }}>
-                Note: Commission structures are evolving; your agent will confirm what the seller offers on this listing.
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* 10. Offer Price & Escalation + Rent-back(옵션 왼쪽 / 라벨 오른쪽) */}
-          <Card className="mc-card">
-            <CardContent className="p-5 md:p-6">
-              <h2 className="text-lg font-medium">10. Offer Price & Escalation</h2>
-
-              <div style={{ display: "grid", gap: 14, marginTop: 12 }}>
-                <FormRow label="Seller Asking (List Price)">
-                  <Input
-                    inputMode="numeric"
-                    value={listPrice}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setListPrice(e.target.value.replace(/[^0-9]/g, ""))}
-                    placeholder="e.g., 875000"
-                  />
-                </FormRow>
-
-                <FormRow label="Your Offer Price">
-                  <Input
-                    inputMode="numeric"
-                    value={offerPrice}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOfferPrice(e.target.value.replace(/[^0-9]/g, ""))}
-                    placeholder="e.g., 895000"
-                  />
-                </FormRow>
-
-                <FormRow label="Escalation Up To">
-                  <Input
-                    inputMode="numeric"
-                    value={escalationCap}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEscalationCap(e.target.value.replace(/[^0-9]/g, ""))}
-                    placeholder="e.g., 920000"
-                  />
-                </FormRow>
-
-                <FormRow label="Escalation By (increment)">
-                  <Input
-                    inputMode="numeric"
-                    value={escalationBy}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEscalationBy(e.target.value.replace(/[^0-9]/g, ""))}
-                    placeholder="e.g., 5000"
-                  />
-                </FormRow>
-              </div>
-
-              {/* 여기서 레이아웃 변경: 왼쪽에 옵션, 오른쪽에 라벨 */}
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr auto",
-                  alignItems: "start",
-                  columnGap: 18,
-                  rowGap: 10,
-                  marginTop: 16,
-                }}
-              >
-                {/* 왼쪽: 옵션들 (1~9번과 동일한 왼쪽 정렬, 세로 리스트) */}
-                <div style={{ display: "grid", gap: 10 }}>
-                  {RENTBACK.map((opt) => (
-                    <OptionTile
-                      key={opt.id}
-                      active={rentback === opt.id}
-                      label={opt.label}
-                      onSelect={() => setRentback(opt.id)}
-                      fullWidth={true}
-                    />
-                  ))}
-                </div>
-
-                
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Final — Offer Strength */}
-          <Card className="mc-card">
-            <CardContent className="p-6 md:p-8" style={{ textAlign: "center" }}>
-              <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                <Sparkles className="h-5 w-5 text-neutral-300" />
-                <h2 className="text-xl md:text-2xl font-semibold">Final Offer Strength</h2>
-              </div>
-
-              <div style={{ marginTop: 18 }}>
-                <div className="mc-bar" style={{ margin: "0 auto", maxWidth: 560 }}>
-                  <motion.div
-                    className="mc-bar-fill"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${score}%` }}
-                    transition={{ type: "spring", stiffness: 80, damping: 20 }}
-                  />
-                </div>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 10 }}>
-                  <div style={{ fontSize: 32, fontWeight: 600 }}>{score}</div>
-                  <div className="rounded-full" style={{ border: "1px solid rgba(255,255,255,.15)", background: "rgba(255,255,255,.08)", padding: "6px 10px", fontSize: 14 }}>
-                    <span style={{ marginRight: 6 }}>{badge.emoji}</span>
-                    {badge.label}
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(2, minmax(0,1fr))", maxWidth: 680, margin: "18px auto 0" }}>
-                <SummaryKV label="Competition" value={COMPETITION_OPTIONS.find(o=>o.id===competition)?.label || ""} />
-                <SummaryKV label="Financing" value={`${FINANCING_OPTIONS.find(o=>o.id===financing)?.label?.split(" — ")[0]} • ${downPct}% down`} />
-                <SummaryKV label="Appraisal" value={APPRAISAL_OPTIONS.find(o=>o.id===appraisal)?.label || ""} />
-                <SummaryKV label="Price" value={`List $${Number(listPrice||0).toLocaleString()} → Offer $${Number(offerPrice||0).toLocaleString()}`} />
-                {appraisal === "gapCover" && <SummaryKV label="Gap cover" value={`Up to $${gapAmount.toLocaleString()}`} />}
-                <SummaryKV label="EMD" value={`${emdPct}% of offer`} />
-              </div>
-
+          {!compact && (
+            <>
               <div style={{ marginTop: 18 }}>
                 <p className="text-sm font-medium" style={{ marginBottom: 8 }}>Recommendations</p>
                 <ul style={{ listStyle: "disc", paddingLeft: 18, margin: "0 auto", textAlign: "left", maxWidth: 680, lineHeight: 1.6 }}>
                   {getRecommendations(recsState).map((r, i) => (<li key={i} style={{ fontSize: 14 }}>{r}</li>))}
                 </ul>
               </div>
-
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
-                <Button
-                  onClick={() => {
-                    const txt = `Offer Plan (Score ${score} – ${badge.label})
-- Competition: ${COMPETITION_OPTIONS.find(o=>o.id===competition)?.label}
-- Financing: ${FINANCING_OPTIONS.find(o=>o.id===financing)?.label?.split(" — ")[0]} / ${downPct}% down
-- Appraisal: ${APPRAISAL_OPTIONS.find(o=>o.id===appraisal)?.label}
-- Price: List $${Number(listPrice||0).toLocaleString()} → Offer $${Number(offerPrice||0).toLocaleString()}
-Recommendations:
-${getRecommendations(recsState).map((x,i)=>`${i+1}. ${x}`).join("\n")}
-`;
-                    navigator.clipboard.writeText(txt);
-                    alert("Copied final plan to clipboard.");
-                  }}
-                >
-                  Copy Plan
-                </Button>
-                <Button variant="secondary" className="mc-btn-secondary" onClick={() => window.print()}>
-                  Print
-                </Button>
-              </div>
-
               <p className="mt-5 text-xs text-neutral-400" style={{ textAlign: "center" }}>
                 This output is educational. We will finalize with listing feedback and local norms before drafting.
               </p>
-            </CardContent>
-          </Card>
+            </>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
 
-          {/* FOOTER — 항상 중앙 정렬 */}
-          <footer
-            className="text-xs text-neutral-500"
-            style={{ marginTop: 8, width: "100%", textAlign: "center", display: "block" }}
-          >
-            © {new Date().getFullYear()} Maison Collective • Built for client education
-          </footer>
+  return (
+    <div className="mc-bg" style={{ minHeight: "100vh" }}>
+      <div style={{ maxWidth: 1180, margin: "0 auto", padding: "32px 20px 48px" }}>
+        {Header}
+
+        {/* 메인 레이아웃: 데스크탑은 질문(좌) + 실시간 요약(우, sticky) */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: isWide ? "1fr 340px" : "1fr",
+            gap: isWide ? 24 : 20,
+            alignItems: "start",
+            marginTop: 24,
+          }}
+        >
+          {/* Left: 질문들 (섹션 간 간격 넉넉) */}
+          <div style={{ display: "grid", gap: isWide ? 28 : 22 }}>
+            {/* 1. Competition */}
+            <Card className="mc-card">
+              <CardContent className="p-5 md:p-6">
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <h2 className="text-lg font-medium">1. Competition</h2>
+                  <Info className="h-4 w-4 text-neutral-400" />
+                </div>
+                <p className="mt-1 text-sm text-neutral-400">Is there a competition or are you the only offer? Choose one.</p>
+                <div style={{ display: "grid", gap: 12, gridTemplateColumns: "1fr", marginTop: 14 }}>
+                  {COMPETITION_OPTIONS.map((opt) => (
+                    <OptionTile key={opt.id} active={competition === opt.id} label={opt.label} onSelect={() => setCompetition(opt.id)} />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 2. Basic Information */}
+            <Card className="mc-card">
+              <CardContent className="p-5 md:p-6">
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <Calendar className="h-4 w-4 text-neutral-400" />
+                  <h2 className="text-lg font-medium">2. Basic Information</h2>
+                </div>
+
+                <div style={{ display: "grid", gap: 14, marginTop: 16 }}>
+                  <FormRow label="Property Address">
+                    <Input value={propertyAddress} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPropertyAddress(e.target.value)} placeholder="123 Main St, City, ST" />
+                  </FormRow>
+                  <FormRow label="Buyers Names">
+                    <Input value={buyerNames} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setBuyerNames(e.target.value)} placeholder="Jane & John Doe" />
+                  </FormRow>
+                  <FormRow label="Preferred Settlement Date">
+                    <Input type="date" value={settlementDate} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSettlementDate(e.target.value)} />
+                  </FormRow>
+                  <FormRow label="Available Total Cash ($)">
+                    <Input inputMode="numeric" value={totalCash} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTotalCash(e.target.value.replace(/[^0-9]/g, ""))} placeholder="e.g., 160000" />
+                  </FormRow>
+                  <FormRow label="Notes">
+                    <Textarea value={notes} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNotes(e.target.value)} placeholder="Renovation budget, timeline constraints, etc." />
+                  </FormRow>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 3. Financing Method */}
+            <Card className="mc-card">
+              <CardContent className="p-5 md:p-6">
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <BarChart3 className="h-4 w-4 text-neutral-400" />
+                  <h2 className="text-lg font-medium">3. Financing Method</h2>
+                </div>
+
+                <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
+                  {FINANCING_OPTIONS.map((opt) => (
+                    <OptionTile key={opt.id} active={financing === opt.id} label={opt.label} onSelect={() => setFinancing(opt.id)} />
+                  ))}
+                </div>
+
+                <div style={{ marginTop: 16 }}>
+                  <Label className="text-neutral-200">Down Payment (%)</Label>
+                  <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 8 }}>
+                    <Slider value={[downPct]} min={0} max={100} step={1} onValueChange={(v) => setDownPct(v[0])} className="w-full" />
+                    <div style={{ width: 54, textAlign: "right", fontSize: 14 }}>{downPct}%</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 4. Home Sale Contingency */}
+            <Card className="mc-card">
+              <CardContent className="p-5 md:p-6">
+                <h2 className="text-lg font-medium">4. Home Sale Contingency</h2>
+                <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
+                  {SALE_CONTINGENCY.map((opt) => (
+                    <OptionTile key={opt.id} active={saleCont === opt.id} label={opt.label} onSelect={() => setSaleCont(opt.id)} />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 5. EMD */}
+            <Card className="mc-card">
+              <CardContent className="p-5 md:p-6">
+                <h2 className="text-lg font-medium">5. Earnest Money Deposit (EMD)</h2>
+                <p className="text-sm text-neutral-400" style={{ marginTop: 6 }}>Signals seriousness. Held by title/brokerage and credited at closing.</p>
+                <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 12 }}>
+                  <Slider value={[emdPct]} min={0} max={20} step={1} onValueChange={(v) => setEmdPct(v[0])} className="w-full" />
+                  <div style={{ width: 64, textAlign: "right", fontSize: 14 }}>{emdPct}%</div>
+                </div>
+                <div style={{ display: "flex", gap: 8, fontSize: 12, opacity: .8, marginTop: 8, flexWrap: "wrap" }}>
+                  <span className="rounded" style={{ background: "rgba(255,255,255,.06)", padding: "4px 8px" }}>2% — Standard</span>
+                  <span className="rounded" style={{ background: "rgba(255,255,255,.06)", padding: "4px 8px" }}>5% — Strong</span>
+                  <span className="rounded" style={{ background: "rgba(255,255,255,.06)", padding: "4px 8px" }}>10%+ — Very Strong</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 6. Inspection */}
+            <Card className="mc-card">
+              <CardContent className="p-5 md:p-6">
+                <h2 className="text-lg font-medium">6. Home Inspection Contingency</h2>
+                <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
+                  {INSPECTION_OPTIONS.map((opt) => (
+                    <OptionTile key={opt.id} active={inspection === opt.id} label={opt.label} onSelect={() => setInspection(opt.id)} />
+                  ))}
+                </div>
+
+                {inspection === "aLaCarte" && (
+                  <div style={{ marginTop: 12 }}>
+                    <Label className="text-neutral-200">Pick specific tests (optional)</Label>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0,1fr))", gap: 10, marginTop: 10 }}>
+                      {["Structural & Mechanical","Mold","Environmental","Radon","Chimney","Lead-Based Paint","Wood Destroying Insect"].map((k) => {
+                        const id = k.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+                        const checked = inspectionChecks.includes(id);
+                        return (
+                          <label key={id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}>
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                                setInspectionChecks((prev) =>
+                                  e.target.checked ? [...prev, id] : prev.filter((x) => x !== id)
+                                );
+                              }}
+                            />
+                            <span>{k}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* 7. Appraisal & Financing Contingency */}
+            <Card className="mc-card">
+              <CardContent className="p-5 md:p-6">
+                <h2 className="text-lg font-medium">7. Appraisal & Financing Contingency</h2>
+                <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
+                  {APPRAISAL_OPTIONS.map((opt) => (
+                    <OptionTile key={opt.id} active={appraisal === opt.id} label={opt.label} onSelect={() => setAppraisal(opt.id)} />
+                  ))}
+                </div>
+                {appraisal === "gapCover" && (
+                  <div style={{ marginTop: 12 }}>
+                    <Label className="text-neutral-200">Guarantee to cover appraisal gap up to ($)</Label>
+                    <Input
+                      inputMode="numeric"
+                      value={gapAmount || ""}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setGapAmount(Number(e.target.value.replace(/[^0-9]/g, "")) || 0)}
+                      placeholder="e.g., 10000"
+                    />
+                    <p className="mt-1 text-xs text-neutral-400" style={{ marginTop: 6 }}>+1 score per $5,000 guaranteed (max +10)</p>
+                  </div>
+                )}
+                <div style={{ display: "grid", gap: 12, marginTop: 12 }}>
+                  {FINANCING_CONT.map((opt) => (
+                    <OptionTile key={opt.id} active={finCont === opt.id} label={opt.label} onSelect={() => setFinCont(opt.id)} />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 8. Recordation / Transfer Tax / Title */}
+            <Card className="mc-card">
+              <CardContent className="p-5 md:p-6">
+                <h2 className="text-lg font-medium">8. Recordation / Transfer Tax / Title Company</h2>
+                <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
+                  {TAX_TITLE_SPLIT.map((opt) => (
+                    <OptionTile key={opt.id} active={taxSplit === opt.id} label={opt.label} onSelect={() => setTaxSplit(opt.id)} />
+                  ))}
+                  {TITLE_PREF.map((opt) => (
+                    <OptionTile key={opt.id} active={titlePref === opt.id} label={opt.label} onSelect={() => setTitlePref(opt.id)} />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 9. Commission */}
+            <Card className="mc-card">
+              <CardContent className="p-5 md:p-6">
+                <h2 className="text-lg font-medium">9. Commission</h2>
+                <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
+                  {COMMISSION.map((opt) => (
+                    <OptionTile key={opt.id} active={commission === opt.id} label={opt.label} onSelect={() => setCommission(opt.id)} />
+                  ))}
+                </div>
+                <p className="text-xs text-neutral-400" style={{ marginTop: 10 }}>
+                  Note: Commission structures are evolving; your agent will confirm what the seller offers on this listing.
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* 10. Offer Price & Escalation */}
+            <Card className="mc-card">
+              <CardContent className="p-5 md:p-6">
+                <h2 className="text-lg font-medium">10. Offer Price & Escalation</h2>
+
+                <div style={{ display: "grid", gap: 14, marginTop: 16 }}>
+                  <FormRow label="Seller Asking (List Price)">
+                    <Input inputMode="numeric" value={listPrice} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setListPrice(e.target.value.replace(/[^0-9]/g, ""))} placeholder="e.g., 875000" />
+                  </FormRow>
+
+                  <FormRow label="Your Offer Price">
+                    <Input inputMode="numeric" value={offerPrice} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOfferPrice(e.target.value.replace(/[^0-9]/g, ""))} placeholder="e.g., 895000" />
+                  </FormRow>
+
+                  <FormRow label="Escalation Up To">
+                    <Input inputMode="numeric" value={escalationCap} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEscalationCap(e.target.value.replace(/[^0-9]/g, ""))} placeholder="e.g., 920000" />
+                  </FormRow>
+
+                  <FormRow label="Escalation By (increment)">
+                    <Input inputMode="numeric" value={escalationBy} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEscalationBy(e.target.value.replace(/[^0-9]/g, ""))} placeholder="e.g., 5000" />
+                  </FormRow>
+
+                  {/* Rent-back: 라벨 없이 옵션만 왼쪽 정렬 */}
+                  <div style={{ display: "grid", gap: 10, marginTop: 4 }}>
+                    {RENTBACK.map((opt) => (
+                      <OptionTile key={opt.id} active={rentback === opt.id} label={opt.label} onSelect={() => setRentback(opt.id)} fullWidth />
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 모바일용 최종 요약 (데스크탑에선 숨김 효과: 아래에서 조건부 렌더) */}
+            {!isWide && <OfferStrengthCard />}
+            <p className="text-center text-xs text-neutral-500" style={{ marginTop: 8 }}>
+              © {new Date().getFullYear()} Maison Collective • Built for client education
+            </p>
+          </div>
+
+          {/* Right: 데스크탑 sticky 요약 */}
+          {isWide && (
+            <div style={{ position: "sticky", top: 24 }}>
+              <OfferStrengthCard compact />
+            </div>
+          )}
         </div>
       </div>
     </div>
